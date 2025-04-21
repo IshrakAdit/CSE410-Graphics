@@ -9,14 +9,24 @@ struct point
     double x, y, z;
 };
 
-point pos = {100, 100, 0}; // Camera position
-point l = {-1, -1, 0};     // Look (direction)
-point r = {-1, 1, 0};      // Right
-point u = {0, 0, 1};       // Up
+// Initial camera position and direction vectors
+point pos = {100, 100, 100};
+point l = {-1, -1, -1}; // Look direction (toward origin)
+point r = {1, -1, 0};   // Right vector
+point u = {0, 0, 1};    // Up vector
 
 double angle = 0;
 int drawgrid = 0;
 int drawaxes = 0;
+
+// Utility function to normalize a vector
+void normalize(point *p)
+{
+    double len = sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
+    p->x /= len;
+    p->y /= len;
+    p->z /= len;
+}
 
 void drawAxes()
 {
@@ -116,7 +126,7 @@ void drawSS()
     glPushMatrix();
     glColor3f(0, 1, 0);
     glTranslatef(0, 0, 0);
-    glRotatef(60, 1, 1, 0);
+    glRotatef(0, 1, 1, 1);
     drawCube(50);
     glPopMatrix();
 }
@@ -128,17 +138,7 @@ void keyboardListener(unsigned char key, int x, int y)
 
     switch (key)
     {
-    case '1': // yaw left
-        temp.x = l.x * cos(rate) + r.x * sin(rate);
-        temp.y = l.y * cos(rate) + r.y * sin(rate);
-        temp.z = l.z * cos(rate) + r.z * sin(rate);
-        r.x = r.x * cos(rate) - l.x * sin(rate);
-        r.y = r.y * cos(rate) - l.y * sin(rate);
-        r.z = r.z * cos(rate) - l.z * sin(rate);
-        l = temp;
-        break;
-
-    case '2': // yaw right
+    case '1': // yaw right
         temp.x = l.x * cos(-rate) + r.x * sin(-rate);
         temp.y = l.y * cos(-rate) + r.y * sin(-rate);
         temp.z = l.z * cos(-rate) + r.z * sin(-rate);
@@ -146,6 +146,36 @@ void keyboardListener(unsigned char key, int x, int y)
         r.y = r.y * cos(-rate) - l.y * sin(-rate);
         r.z = r.z * cos(-rate) - l.z * sin(-rate);
         l = temp;
+
+        // Normalize vectors
+        normalize(&l);
+        normalize(&r);
+
+        // Recalculate u to ensure orthogonality
+        u.x = l.y * r.z - l.z * r.y;
+        u.y = l.z * r.x - l.x * r.z;
+        u.z = l.x * r.y - l.y * r.x;
+        normalize(&u);
+        break;
+
+    case '2': // yaw left
+        temp.x = l.x * cos(rate) + r.x * sin(rate);
+        temp.y = l.y * cos(rate) + r.y * sin(rate);
+        temp.z = l.z * cos(rate) + r.z * sin(rate);
+        r.x = r.x * cos(rate) - l.x * sin(rate);
+        r.y = r.y * cos(rate) - l.y * sin(rate);
+        r.z = r.z * cos(rate) - l.z * sin(rate);
+        l = temp;
+
+        // Normalize vectors
+        normalize(&l);
+        normalize(&r);
+
+        // Recalculate u to ensure orthogonality
+        u.x = l.y * r.z - l.z * r.y;
+        u.y = l.z * r.x - l.x * r.z;
+        u.z = l.x * r.y - l.y * r.x;
+        normalize(&u);
         break;
 
     case '3': // pitch up
@@ -156,6 +186,16 @@ void keyboardListener(unsigned char key, int x, int y)
         u.y = u.y * cos(rate) - l.y * sin(rate);
         u.z = u.z * cos(rate) - l.z * sin(rate);
         l = temp;
+
+        // Normalize vectors
+        normalize(&l);
+        normalize(&u);
+
+        // Recalculate r to ensure orthogonality
+        r.x = u.y * l.z - u.z * l.y;
+        r.y = u.z * l.x - u.x * l.z;
+        r.z = u.x * l.y - u.y * l.x;
+        normalize(&r);
         break;
 
     case '4': // pitch down
@@ -166,6 +206,16 @@ void keyboardListener(unsigned char key, int x, int y)
         u.y = u.y * cos(-rate) - l.y * sin(-rate);
         u.z = u.z * cos(-rate) - l.z * sin(-rate);
         l = temp;
+
+        // Normalize vectors
+        normalize(&l);
+        normalize(&u);
+
+        // Recalculate r to ensure orthogonality
+        r.x = u.y * l.z - u.z * l.y;
+        r.y = u.z * l.x - u.x * l.z;
+        r.z = u.x * l.y - u.y * l.x;
+        normalize(&r);
         break;
 
     case '5': // roll clockwise
@@ -176,6 +226,16 @@ void keyboardListener(unsigned char key, int x, int y)
         u.y = u.y * cos(rate) - r.y * sin(rate);
         u.z = u.z * cos(rate) - r.z * sin(rate);
         r = temp;
+
+        // Normalize vectors
+        normalize(&r);
+        normalize(&u);
+
+        // Recalculate l to ensure orthogonality
+        l.x = r.y * u.z - r.z * u.y;
+        l.y = r.z * u.x - r.x * u.z;
+        l.z = r.x * u.y - r.y * u.x;
+        normalize(&l);
         break;
 
     case '6': // roll counter-clockwise
@@ -186,6 +246,16 @@ void keyboardListener(unsigned char key, int x, int y)
         u.y = u.y * cos(-rate) - r.y * sin(-rate);
         u.z = u.z * cos(-rate) - r.z * sin(-rate);
         r = temp;
+
+        // Normalize vectors
+        normalize(&r);
+        normalize(&u);
+
+        // Recalculate l to ensure orthogonality
+        l.x = r.y * u.z - r.z * u.y;
+        l.y = r.z * u.x - r.x * u.z;
+        l.z = r.x * u.y - r.y * u.x;
+        normalize(&l);
         break;
 
     case 'w':
@@ -198,6 +268,14 @@ void keyboardListener(unsigned char key, int x, int y)
         pos.x -= u.x * 2;
         pos.y -= u.y * 2;
         pos.z -= u.z * 2;
+        break;
+
+    case 'd': // Toggle grid
+        drawgrid = 1 - drawgrid;
+        break;
+
+    case 'a': // Toggle axes
+        drawaxes = 1 - drawaxes;
         break;
     }
 }
@@ -248,6 +326,8 @@ void mouseListener(int button, int state, int x, int y)
             drawaxes = 1 - drawaxes;
         break;
     case GLUT_RIGHT_BUTTON:
+        if (state == GLUT_DOWN)
+            drawgrid = 1 - drawgrid;
         break;
     case GLUT_MIDDLE_BUTTON:
         break;
@@ -283,8 +363,27 @@ void animate()
 void init()
 {
     drawgrid = 0;
-    drawaxes = 1;
+    drawaxes = 0;
     angle = 0;
+
+    // Normalize the direction vectors
+    normalize(&l);
+    normalize(&r);
+    normalize(&u);
+
+    // Make sure the vectors are orthogonal
+    // First, make sure right is perpendicular to look
+    // This is the cross product of world-up and look
+    r.x = u.y * l.z - u.z * l.y;
+    r.y = u.z * l.x - u.x * l.z;
+    r.z = u.x * l.y - u.y * l.x;
+    normalize(&r);
+
+    // Then recompute up as cross product of look and right
+    u.x = l.y * r.z - l.z * r.y;
+    u.y = l.z * r.x - l.x * r.z;
+    u.z = l.x * r.y - l.y * r.x;
+    normalize(&u);
 
     glClearColor(0, 0, 0, 0);
     glMatrixMode(GL_PROJECTION);
