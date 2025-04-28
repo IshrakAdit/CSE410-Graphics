@@ -125,9 +125,9 @@ void drawSS()
 {
     glPushMatrix();
     glColor3f(0, 1, 0);
-    glTranslatef(0, 0, 0);
-    glRotatef(0, 1, 1, 1);
-    drawCube(50);
+    // glTranslatef(0, 0, 0);
+    // glRotatef(0, 1, 1, 1);
+    drawCube(60);
     glPopMatrix();
 }
 

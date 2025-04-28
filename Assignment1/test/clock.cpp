@@ -33,7 +33,7 @@ void drawCircle(float cx, float cy, float radius, int segments)
     glEnd();
 }
 
-// Draw hour markers on the clock face
+// Draw clock markers on the clock face
 void drawClockMarkers()
 {
     // Draw hour markers (thicker lines)
@@ -82,7 +82,7 @@ void drawClockFace()
 {
     // Draw outer rim
     glLineWidth(2.0f);
-    glColor3f(0.7f, 0.7f, 0.7f);
+    glColor3f(0.0f, 0.0f, 0.0f);
     drawCircle(centerX, centerY, CLOCK_RADIUS, 100);
 
     // Draw inner face
@@ -183,7 +183,7 @@ void timer(int value)
 // Initialize OpenGL settings
 void init()
 {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluOrtho2D(-100, 100, -100, 100);
