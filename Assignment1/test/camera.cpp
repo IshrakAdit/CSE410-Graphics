@@ -112,7 +112,8 @@ void drawFloor()
                 glColor3f(0.0, 0.0, 0.0); // Black
             }
 
-            double floor_z_coordinate = -1 * halfCube;
+            // double floor_z_coordinate = -1 * halfCube;
+            double floor_z_coordinate = 0;
 
             glVertex3f(i * tileSize, j * tileSize, floor_z_coordinate);
             glVertex3f(i * tileSize, (j + 1) * tileSize, floor_z_coordinate);
@@ -137,38 +138,38 @@ void drawCube()
 
         // glColor3f(1, 0, 0);
         // Bottom -> Covered by floor
-        // glVertex3f(a, a, -a);
-        // glVertex3f(a, -a, -a);
-        // glVertex3f(-a, -a, -a);
-        // glVertex3f(-a, a, -a);
+        // glVertex3f(a, a, 0);
+        // glVertex3f(a, -a, 0);
+        // glVertex3f(-a, -a, 0);
+        // glVertex3f(-a, a, 0);
 
         glColor3f(0, 1, 0);
         // Front
         glVertex3f(a, a, a);
         glVertex3f(a, -a, a);
-        glVertex3f(a, -a, -a);
-        glVertex3f(a, a, -a);
+        glVertex3f(a, -a, 0);
+        glVertex3f(a, a, 0);
 
         glColor3f(0, 1, 0);
         // Back
         glVertex3f(-a, a, a);
         glVertex3f(-a, -a, a);
-        glVertex3f(-a, -a, -a);
-        glVertex3f(-a, a, -a);
+        glVertex3f(-a, -a, 0);
+        glVertex3f(-a, a, 0);
 
         glColor3f(0, 0, 1);
         // Right
         glVertex3f(a, a, a);
         glVertex3f(-a, a, a);
-        glVertex3f(-a, a, -a);
-        glVertex3f(a, a, -a);
+        glVertex3f(-a, a, 0);
+        glVertex3f(a, a, 0);
 
         glColor3f(0, 0, 1);
         // Left
         glVertex3f(a, -a, a);
         glVertex3f(-a, -a, a);
-        glVertex3f(-a, -a, -a);
-        glVertex3f(a, -a, -a);
+        glVertex3f(-a, -a, 0);
+        glVertex3f(a, -a, 0);
     }
     glEnd();
 }
@@ -249,10 +250,10 @@ void drawSS()
     drawCube();
     drawFloor();
 
-    // glPushMatrix();
-    // glTranslatef(ballPos.x, ballPos.y, ballPos.z);
-    // drawBall(BALL_RADIUS, NUMBER_OF_BALL_STRIPES, NUMBER_OF_BALL_STRIPES);
-    // glPopMatrix();
+    glPushMatrix();
+    glTranslatef(ballPos.x, ballPos.y, ballPos.z);
+    drawBall(BALL_RADIUS, NUMBER_OF_BALL_STRIPES, NUMBER_OF_BALL_STRIPES);
+    glPopMatrix();
 
     glPopMatrix();
 }
