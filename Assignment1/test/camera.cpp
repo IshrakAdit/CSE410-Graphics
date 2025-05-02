@@ -4,11 +4,11 @@
 
 #define PI (2 * acos(0.0))
 #define CUBE_SIZE 120
-#define BALL_RADIUS 5.0
+#define BALL_RADIUS 4.0
 #define NUMBER_OF_BALL_STRIPES 30
 #define GRAVITY 9.8
 #define RESTITUTION 0.75
-#define MIN_VELOCITY 0.1
+#define MIN_VELOCITY 2
 #define ARROW_SCALE 0.5
 
 struct point
@@ -31,8 +31,8 @@ point cube_center = {0, 0, 0};
 // Variables: Ball position and velocity
 point ball_position = {0, 0, BALL_RADIUS};
 point ball_velocity = {0, 0, 0};
-point initial_velocity = {0, 0, 80};
-double initial_speed = 80.0;
+point initial_velocity = {0, 0, 40};
+double initial_speed = 40.0;
 
 // Variables: Ball rotation
 double ball_rotation_angle = 0;
@@ -139,7 +139,6 @@ void drawFloor()
     {
         for (j = -numTiles / 2; j < numTiles / 2; j++)
         {
-            // Make sure tiles stay within cube bounds
             if (i * tileSize + tileSize > half_cube_size || i * tileSize < -half_cube_size ||
                 j * tileSize + tileSize > half_cube_size || j * tileSize < -half_cube_size)
             {
@@ -180,7 +179,7 @@ void drawCube()
         glVertex3f(-a, a, a);
 
         // glColor3f(1, 0, 0);
-        // Bottom -> Covered by floor
+        // // Bottom -> Covered by floor
         // glVertex3f(a, a, 0);
         // glVertex3f(a, -a, 0);
         // glVertex3f(-a, -a, 0);
