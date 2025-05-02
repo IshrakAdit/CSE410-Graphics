@@ -31,10 +31,12 @@ point cube_center = {0, 0, 0};
 // Variables: Ball position and velocity
 point ball_position = {0, 0, BALL_RADIUS};
 point ball_velocity = {0, 0, 0};
-point initial_velocity = {0, 0, 40};
+point initial_velocity = {0, 0, 80};
+double initial_speed = 80.0;
+
+// Variables: Ball rotation
 double ball_rotation_angle = 0;
-point ball_rotation_axix = {1, 0, 0};
-double initial_speed = 40.0;
+point ball_rotation_axis = {1, 0, 0};
 
 // Variables: simulation
 int draw_grid = 0;
@@ -219,9 +221,9 @@ void drawBall(double radius, int slices, int stacks)
 {
     glPushMatrix();
     glRotatef(ball_rotation_angle * 180.0 / PI,
-              ball_rotation_axix.x,
-              ball_rotation_axix.y,
-              ball_rotation_axix.z);
+              ball_rotation_axis.x,
+              ball_rotation_axis.y,
+              ball_rotation_axis.z);
 
     // Loop over vertical slices (longitude)
     for (int j = 0; j < slices; j++)
@@ -282,6 +284,57 @@ void drawBall(double radius, int slices, int stacks)
     glPopMatrix();
 }
 
+void drawVelocityArrow()
+{
+    if (!show_velocity_arrow || magnitude(ball_velocity) < 0.1)
+    {
+        return;
+    }
+
+    point normal_velocity = ball_velocity;
+    normalize(&normal_velocity);
+
+    double arrowLength = BALL_RADIUS * 2 * ARROW_SCALE * magnitude(ball_velocity) / initial_speed;
+
+    // Draw arrow line
+    glColor3f(1.0, 1.0, 0.0); // Yellow
+    glLineWidth(2.0);
+    glBegin(GL_LINES);
+    glVertex3f(ball_position.x, ball_position.y, ball_position.z);
+    glVertex3f(ball_position.x + normal_velocity.x * arrowLength,
+               ball_position.y + normal_velocity.y * arrowLength,
+               ball_position.z + normal_velocity.z * arrowLength);
+    glEnd();
+    glLineWidth(1.0);
+
+    // Draw arrow head
+    glPushMatrix();
+    glTranslatef(ball_position.x + normal_velocity.x * arrowLength,
+                 ball_position.y + normal_velocity.y * arrowLength,
+                 ball_position.z + normal_velocity.z * arrowLength);
+
+    // Rotate to point in velocity direction
+    point up = {0, 0, 1};
+    double angle = acos(normal_velocity.z) * 180.0 / PI;
+    point rotation_axix = crossProduct(up, normal_velocity);
+    if (magnitude(rotation_axix) < 0.001)
+    {
+        rotation_axix.x = 1;
+        rotation_axix.y = 0;
+        rotation_axix.z = 0;
+    }
+    normalize(&rotation_axix);
+
+    glRotatef(angle, rotation_axix.x, rotation_axix.y, rotation_axix.z);
+
+    // Draw the cone
+    GLUquadric *quadric = gluNewQuadric();
+    gluCylinder(quadric, BALL_RADIUS * 0.3 * ARROW_SCALE, 0, BALL_RADIUS * ARROW_SCALE, 10, 1);
+    gluDeleteQuadric(quadric);
+
+    glPopMatrix();
+}
+
 // Reset ball with random position and velocity
 void resetBall()
 {
@@ -303,11 +356,120 @@ void resetBall()
 
     // No initial rotation/simulation
     ball_rotation_angle = 0;
-    ball_rotation_axix.x = 1;
-    ball_rotation_axix.y = 0;
-    ball_rotation_axix.z = 0;
+    ball_rotation_axis.x = 1;
+    ball_rotation_axis.y = 0;
+    ball_rotation_axis.z = 0;
 
     simulation_running = 0;
+}
+
+void handleBallPhysics(double dt)
+{
+    if (!simulation_running)
+    {
+        return;
+    }
+
+    // Previous position for calculating rolling
+    point prev_ball_position = ball_position;
+
+    // Apply gravity
+    ball_velocity.z -= GRAVITY * dt;
+
+    // Update position
+    ball_position.x += ball_velocity.x * dt;
+    ball_position.y += ball_velocity.y * dt;
+    ball_position.z += ball_velocity.z * dt;
+
+    double halfCube = CUBE_SIZE / 2;
+
+    // Check collision with walls and apply bounce
+    if (ball_position.x - BALL_RADIUS < -halfCube)
+    {
+        ball_position.x = -halfCube + BALL_RADIUS;
+        ball_velocity.x = -ball_velocity.x * RESTITUTION;
+    }
+    if (ball_position.x + BALL_RADIUS > halfCube)
+    {
+        ball_position.x = halfCube - BALL_RADIUS;
+        ball_velocity.x = -ball_velocity.x * RESTITUTION;
+    }
+
+    if (ball_position.y - BALL_RADIUS < -halfCube)
+    {
+        ball_position.y = -halfCube + BALL_RADIUS;
+        ball_velocity.y = -ball_velocity.y * RESTITUTION;
+    }
+    if (ball_position.y + BALL_RADIUS > halfCube)
+    {
+        ball_position.y = halfCube - BALL_RADIUS;
+        ball_velocity.y = -ball_velocity.y * RESTITUTION;
+    }
+
+    // Floor collision
+    if (ball_position.z - BALL_RADIUS < 0)
+    {
+        ball_position.z = BALL_RADIUS;
+
+        // Only bounce if velocity is significant
+        if (fabs(ball_velocity.z) > MIN_VELOCITY)
+        {
+            ball_velocity.z = -ball_velocity.z * RESTITUTION;
+        }
+        else
+        {
+            ball_velocity.z = 0;
+        }
+    }
+
+    // Ceiling collision
+    if (ball_position.z + BALL_RADIUS > halfCube)
+    {
+        ball_position.z = halfCube - BALL_RADIUS;
+        ball_velocity.z = -ball_velocity.z * RESTITUTION;
+    }
+
+    // Calculate rolling rotation
+    if (magnitude(ball_velocity) > 0.01)
+    {
+        // Calculate displacement vector
+        point displacement;
+        displacement.x = ball_position.x - prev_ball_position.x;
+        displacement.y = ball_position.y - prev_ball_position.y;
+        displacement.z = ball_position.z - prev_ball_position.z;
+
+        // Only calculate rotation if there's actual displacement
+        if (magnitude(displacement) > 0.001)
+        {
+            // Calculate rotation axis (perpendicular to displacement)
+            // For a ball rolling on a surface, the rotation axis is perpendicular
+            // to both the velocity and the up vector
+            point velXY = {ball_velocity.x, ball_velocity.y, 0}; // Projected velocity on XY plane
+            normalize(&velXY);
+
+            point up = {0, 0, 1};
+            ball_rotation_axis = crossProduct(velXY, up);
+            normalize(&ball_rotation_axis);
+
+            // Calculate rotation angle based on arc length
+            double displacement2D = sqrt(displacement.x * displacement.x + displacement.y * displacement.y);
+            ball_rotation_angle += displacement2D / BALL_RADIUS;
+        }
+    }
+
+    // Damping - slow the ball down over time (simple air resistance)
+    double damping = 0.998;
+    ball_velocity.x *= damping;
+    ball_velocity.y *= damping;
+    ball_velocity.z *= damping;
+
+    // Stop the ball if it's moving too slowly
+    if (ball_position.z <= BALL_RADIUS + 0.01 && magnitude(ball_velocity) < MIN_VELOCITY)
+    {
+        ball_velocity.x = 0;
+        ball_velocity.y = 0;
+        ball_velocity.z = 0;
+    }
 }
 
 void drawSS()
@@ -321,6 +483,8 @@ void drawSS()
     glTranslatef(ball_position.x, ball_position.y, ball_position.z);
     drawBall(BALL_RADIUS, NUMBER_OF_BALL_STRIPES, NUMBER_OF_BALL_STRIPES);
     glPopMatrix();
+
+    drawVelocityArrow();
 
     glPopMatrix();
 }
@@ -428,8 +592,16 @@ void keyboardListener(unsigned char key, int x, int y)
         adjustCameraToLookAtCube();
         break;
 
+    case ' ':
+        simulation_running = 1 - simulation_running;
+        break;
+
     case 'r':
         resetBall();
+        break;
+
+    case 'v':
+        show_velocity_arrow = 1 - show_velocity_arrow;
         break;
 
     case 'd':
@@ -517,6 +689,18 @@ void display()
 void animate()
 {
     angle += 0.05;
+
+    static double lastTime = 0;
+    double currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0; // in seconds
+    double deltaTime = currentTime - lastTime;
+
+    // Limit physics updates to a reasonable time step
+    if (deltaTime > 0.016)
+    { // Cap at 60fps (16ms)
+        handleBallPhysics(deltaTime);
+        lastTime = currentTime;
+    }
+
     glutPostRedisplay();
 }
 
