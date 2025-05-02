@@ -65,6 +65,21 @@ point crossProduct(point a, point b)
     return result;
 }
 
+void rotate_vectors(point *a, point *b, float angle)
+{
+    point temp;
+    temp.x = a->x * cos(angle) + b->x * sin(angle);
+    temp.y = a->y * cos(angle) + b->y * sin(angle);
+    temp.z = a->z * cos(angle) + b->z * sin(angle);
+
+    b->x = b->x * cos(angle) - a->x * sin(angle);
+    b->y = b->y * cos(angle) - a->y * sin(angle);
+    b->z = b->z * cos(angle) - a->z * sin(angle);
+
+    *a = temp;
+    return;
+}
+
 // Draw functions
 void drawAxes()
 {
@@ -271,8 +286,6 @@ void drawSS()
 {
     glPushMatrix();
     glColor3f(0, 1, 0);
-    // glTranslatef(0, 0, 0);
-    // glRotatef(0, 1, 1, 1);
     drawCube();
     drawFloor();
 
@@ -324,15 +337,8 @@ void keyboardListener(unsigned char key, int x, int y)
     switch (key)
     {
     case '1': // yaw right
-        temp.x = look_direction_vector.x * cos(-rate) + right_vector.x * sin(-rate);
-        temp.y = look_direction_vector.y * cos(-rate) + right_vector.y * sin(-rate);
-        temp.z = look_direction_vector.z * cos(-rate) + right_vector.z * sin(-rate);
-        right_vector.x = right_vector.x * cos(-rate) - look_direction_vector.x * sin(-rate);
-        right_vector.y = right_vector.y * cos(-rate) - look_direction_vector.y * sin(-rate);
-        right_vector.z = right_vector.z * cos(-rate) - look_direction_vector.z * sin(-rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &right_vector, (-1 * rate));
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
@@ -341,15 +347,8 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
 
     case '2': // yaw left
-        temp.x = look_direction_vector.x * cos(rate) + right_vector.x * sin(rate);
-        temp.y = look_direction_vector.y * cos(rate) + right_vector.y * sin(rate);
-        temp.z = look_direction_vector.z * cos(rate) + right_vector.z * sin(rate);
-        right_vector.x = right_vector.x * cos(rate) - look_direction_vector.x * sin(rate);
-        right_vector.y = right_vector.y * cos(rate) - look_direction_vector.y * sin(rate);
-        right_vector.z = right_vector.z * cos(rate) - look_direction_vector.z * sin(rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &right_vector, rate);
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
@@ -358,15 +357,8 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
 
     case '3': // pitch up
-        temp.x = look_direction_vector.x * cos(rate) + up_vector.x * sin(rate);
-        temp.y = look_direction_vector.y * cos(rate) + up_vector.y * sin(rate);
-        temp.z = look_direction_vector.z * cos(rate) + up_vector.z * sin(rate);
-        up_vector.x = up_vector.x * cos(rate) - look_direction_vector.x * sin(rate);
-        up_vector.y = up_vector.y * cos(rate) - look_direction_vector.y * sin(rate);
-        up_vector.z = up_vector.z * cos(rate) - look_direction_vector.z * sin(rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &up_vector, rate);
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
@@ -375,15 +367,8 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
 
     case '4': // pitch down
-        temp.x = look_direction_vector.x * cos(-rate) + up_vector.x * sin(-rate);
-        temp.y = look_direction_vector.y * cos(-rate) + up_vector.y * sin(-rate);
-        temp.z = look_direction_vector.z * cos(-rate) + up_vector.z * sin(-rate);
-        up_vector.x = up_vector.x * cos(-rate) - look_direction_vector.x * sin(-rate);
-        up_vector.y = up_vector.y * cos(-rate) - look_direction_vector.y * sin(-rate);
-        up_vector.z = up_vector.z * cos(-rate) - look_direction_vector.z * sin(-rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &up_vector, (-1 * rate));
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
@@ -392,15 +377,8 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
 
     case '5': // roll clockwise
-        temp.x = right_vector.x * cos(rate) + up_vector.x * sin(rate);
-        temp.y = right_vector.y * cos(rate) + up_vector.y * sin(rate);
-        temp.z = right_vector.z * cos(rate) + up_vector.z * sin(rate);
-        up_vector.x = up_vector.x * cos(rate) - right_vector.x * sin(rate);
-        up_vector.y = up_vector.y * cos(rate) - right_vector.y * sin(rate);
-        up_vector.z = up_vector.z * cos(rate) - right_vector.z * sin(rate);
-        right_vector = temp;
+        rotate_vectors(&right_vector, &up_vector, rate);
 
-        // Normalize vectors
         normalize(&right_vector);
         normalize(&up_vector);
 
@@ -409,15 +387,8 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
 
     case '6': // roll counter-clockwise
-        temp.x = right_vector.x * cos(-rate) + up_vector.x * sin(-rate);
-        temp.y = right_vector.y * cos(-rate) + up_vector.y * sin(-rate);
-        temp.z = right_vector.z * cos(-rate) + up_vector.z * sin(-rate);
-        up_vector.x = up_vector.x * cos(-rate) - right_vector.x * sin(-rate);
-        up_vector.y = up_vector.y * cos(-rate) - right_vector.y * sin(-rate);
-        up_vector.z = up_vector.z * cos(-rate) - right_vector.z * sin(-rate);
-        right_vector = temp;
+        rotate_vectors(&right_vector, &up_vector, (-1 * rate));
 
-        // Normalize vectors
         normalize(&right_vector);
         normalize(&up_vector);
 
@@ -435,11 +406,11 @@ void keyboardListener(unsigned char key, int x, int y)
         adjustCameraToLookAtCube();
         break;
 
-    case 'd': // Toggle grid
+    case 'd':
         drawgrid = 1 - drawgrid;
         break;
 
-    case 'a': // Toggle axes
+    case 'a':
         drawaxes = 1 - drawaxes;
         break;
     }
@@ -493,8 +464,6 @@ void mouseListener(int button, int state, int x, int y)
     case GLUT_RIGHT_BUTTON:
         if (state == GLUT_DOWN)
             drawgrid = 1 - drawgrid;
-        break;
-    case GLUT_MIDDLE_BUTTON:
         break;
     }
 }
