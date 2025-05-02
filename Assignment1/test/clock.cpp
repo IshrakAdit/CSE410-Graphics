@@ -162,10 +162,19 @@ void display()
     int minute = timeinfo->tm_min;
     int second = timeinfo->tm_sec;
 
+    // Get milliseconds for smooth second hand movement
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    float milliseconds = ts.tv_nsec / 1000000.0f;
+
     // Convert to angles
-    float hourAngle = (hour % 12) * 30.0f + (minute / 60.0f) * 30.0f; // 30 degrees per hour
-    float minuteAngle = minute * 6.0f + (second / 60.0f) * 6.0f;      // 6 degrees per minute
-    float secondAngle = second * 6.0f;                                // 6 degrees per second
+    float hourAngle = (hour % 12) * 30.0f + (minute / 60.0f) * 30.0f;
+
+    // Minute hand now moves discretely (jumps to each minute marker)
+    float minuteAngle = minute * 6.0f;
+
+    // Second hand now moves smoothly with millisecond precision
+    float secondAngle = second * 6.0f + (milliseconds / 1000.0f) * 6.0f;
 
     // Draw the clock face
     drawClockFace();
