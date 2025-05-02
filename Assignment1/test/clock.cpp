@@ -11,9 +11,9 @@ const float HOUR_HAND_LENGTH = 20.0f;
 const float MINUTE_HAND_LENGTH = 30.0f;
 const float SECOND_HAND_LENGTH = 40.0f;
 
-const float HOUR_HAND_WIDTH = 3.0f;
-const float MINUTE_HAND_WIDTH = 2.0f;
-const float SECOND_HAND_WIDTH = 1.0f;
+const float HOUR_HAND_WIDTH = 4.0f;
+const float MINUTE_HAND_WIDTH = 3.0f;
+const float SECOND_HAND_WIDTH = 2.0f;
 
 // Clock center position
 float centerX = 0.0f;
@@ -111,7 +111,7 @@ void drawHand(float angle, float length, float width, float r, float g, float b)
 
     glPushMatrix();
     glTranslatef(centerX + x, centerY + y, 0);
-    drawSquare(1.5, r, g, b);
+    drawSquare(2, r, g, b);
     glPopMatrix();
 }
 
@@ -153,26 +153,26 @@ void display()
     glutSwapBuffers();
 }
 
-void reshape(int width, int height)
-{
-    float aspectRatio = (float)width / (float)height;
+// void reshape(int width, int height)
+// {
+//     float aspectRatio = (float)width / (float)height;
 
-    glViewport(0, 0, width, height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
+//     glViewport(0, 0, width, height);
+//     glMatrixMode(GL_PROJECTION);
+//     glLoadIdentity();
 
-    if (width >= height)
-    {
-        gluOrtho2D(-100 * aspectRatio, 100 * aspectRatio, -100, 100);
-    }
-    else
-    {
-        gluOrtho2D(-100, 100, -100 / aspectRatio, 100 / aspectRatio);
-    }
+//     if (width >= height)
+//     {
+//         gluOrtho2D(-100 * aspectRatio, 100 * aspectRatio, -100, 100);
+//     }
+//     else
+//     {
+//         gluOrtho2D(-100, 100, -100 / aspectRatio, 100 / aspectRatio);
+//     }
 
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
+//     glMatrixMode(GL_MODELVIEW);
+//     glLoadIdentity();
+// }
 
 void timer(int value)
 {
@@ -198,7 +198,7 @@ int main(int argc, char **argv)
 
     init();
     glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
+    // glutReshapeFunc(reshape);
     glutTimerFunc(0, timer, 0);
 
     glutMainLoop();
