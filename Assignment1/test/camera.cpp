@@ -29,18 +29,18 @@ double angle = 0;
 point cube_center = {0, 0, 0};
 
 // Variables: Ball position and velocity
-point ballPos = {0, 0, BALL_RADIUS};
-point ballVel = {0, 0, 0};
-point initialVel = {0, 0, 40};
-double ballRotationAngle = 0;
-point ballRotationAxis = {1, 0, 0};
-double initialSpeed = 40.0;
+point ball_position = {0, 0, BALL_RADIUS};
+point ball_velocity = {0, 0, 0};
+point initial_velocity = {0, 0, 40};
+double ball_rotation_angle = 0;
+point ball_rotation_axix = {1, 0, 0};
+double initial_speed = 40.0;
 
 // Variables: simulation
-int drawgrid = 0;
-int drawaxes = 0;
-int simRunning = 0;
-int showVelocityArrow = 1;
+int draw_grid = 0;
+int draw_axes = 0;
+int simulation_running = 0;
+int show_velocity_arrow = 1;
 
 // Utility functions
 void normalize(point *p)
@@ -83,7 +83,7 @@ void rotate_vectors(point *a, point *b, float angle)
 // Draw functions
 void drawAxes()
 {
-    if (drawaxes == 1)
+    if (draw_axes == 1)
     {
         glColor3f(1.0, 1.0, 1.0);
         glBegin(GL_LINES);
@@ -104,7 +104,7 @@ void drawAxes()
 void drawGrid()
 {
     int i;
-    if (drawgrid == 1)
+    if (draw_grid == 1)
     {
         glColor3f(0.6, 0.6, 0.6); // grey
         glBegin(GL_LINES);
@@ -129,7 +129,7 @@ void drawFloor()
 {
     int i, j;
     int tileSize = 15;
-    double halfCube = CUBE_SIZE / 2;
+    double half_cube_size = CUBE_SIZE / 2;
     int numTiles = (int)(CUBE_SIZE / tileSize);
 
     glBegin(GL_QUADS);
@@ -138,8 +138,8 @@ void drawFloor()
         for (j = -numTiles / 2; j < numTiles / 2; j++)
         {
             // Make sure tiles stay within cube bounds
-            if (i * tileSize + tileSize > halfCube || i * tileSize < -halfCube ||
-                j * tileSize + tileSize > halfCube || j * tileSize < -halfCube)
+            if (i * tileSize + tileSize > half_cube_size || i * tileSize < -half_cube_size ||
+                j * tileSize + tileSize > half_cube_size || j * tileSize < -half_cube_size)
             {
                 continue;
             }
@@ -153,7 +153,7 @@ void drawFloor()
                 glColor3f(0.0, 0.0, 0.0); // Black
             }
 
-            // double floor_z_coordinate = -1 * halfCube;
+            // double floor_z_coordinate = -1 * half_cube_size;
             double floor_z_coordinate = 0;
 
             glVertex3f(i * tileSize, j * tileSize, floor_z_coordinate);
@@ -218,10 +218,10 @@ void drawCube()
 void drawBall(double radius, int slices, int stacks)
 {
     glPushMatrix();
-    glRotatef(ballRotationAngle * 180.0 / PI,
-              ballRotationAxis.x,
-              ballRotationAxis.y,
-              ballRotationAxis.z);
+    glRotatef(ball_rotation_angle * 180.0 / PI,
+              ball_rotation_axix.x,
+              ball_rotation_axix.y,
+              ball_rotation_axix.z);
 
     // Loop over vertical slices (longitude)
     for (int j = 0; j < slices; j++)
@@ -282,6 +282,34 @@ void drawBall(double radius, int slices, int stacks)
     glPopMatrix();
 }
 
+// Reset ball with random position and velocity
+void resetBall()
+{
+    int half_cube_size = CUBE_SIZE / 2;
+    int quarter_cube_size = half_cube_size / 2;
+
+    // Random position within the cube
+    ball_position.x = (double)(rand() % half_cube_size - quarter_cube_size);
+    ball_position.y = (double)(rand() % half_cube_size - quarter_cube_size);
+    ball_position.z = BALL_RADIUS;
+
+    // Random initial velocity in any direction
+    double theta = (double)(rand() % 360) * PI / 180.0;
+    double phi = (double)(rand() % 180) * PI / 180.0;
+
+    ball_velocity.x = initial_speed * sin(phi) * cos(theta);
+    ball_velocity.y = initial_speed * sin(phi) * sin(theta);
+    ball_velocity.z = initial_speed * cos(phi);
+
+    // No initial rotation/simulation
+    ball_rotation_angle = 0;
+    ball_rotation_axix.x = 1;
+    ball_rotation_axix.y = 0;
+    ball_rotation_axix.z = 0;
+
+    simulation_running = 0;
+}
+
 void drawSS()
 {
     glPushMatrix();
@@ -290,7 +318,7 @@ void drawSS()
     drawFloor();
 
     glPushMatrix();
-    glTranslatef(ballPos.x, ballPos.y, ballPos.z);
+    glTranslatef(ball_position.x, ball_position.y, ball_position.z);
     drawBall(BALL_RADIUS, NUMBER_OF_BALL_STRIPES, NUMBER_OF_BALL_STRIPES);
     glPopMatrix();
 
@@ -305,12 +333,6 @@ void adjustCameraToLookAtCube()
     direction.y = cube_center.y - camera_position.y;
     direction.z = cube_center.z - camera_position.z;
 
-    // double len = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-    // direction.x /= len;
-    // direction.y /= len;
-    // direction.z /= len;
-
-    // Set look_direction_vector to normalized direction
     look_direction_vector = direction;
     normalize(&look_direction_vector);
 
@@ -406,12 +428,16 @@ void keyboardListener(unsigned char key, int x, int y)
         adjustCameraToLookAtCube();
         break;
 
+    case 'r':
+        resetBall();
+        break;
+
     case 'd':
-        drawgrid = 1 - drawgrid;
+        draw_grid = 1 - draw_grid;
         break;
 
     case 'a':
-        drawaxes = 1 - drawaxes;
+        draw_axes = 1 - draw_axes;
         break;
     }
 }
@@ -459,11 +485,11 @@ void mouseListener(int button, int state, int x, int y)
     {
     case GLUT_LEFT_BUTTON:
         if (state == GLUT_DOWN)
-            drawaxes = 1 - drawaxes;
+            draw_axes = 1 - draw_axes;
         break;
     case GLUT_RIGHT_BUTTON:
         if (state == GLUT_DOWN)
-            drawgrid = 1 - drawgrid;
+            draw_grid = 1 - draw_grid;
         break;
     }
 }
@@ -496,8 +522,8 @@ void animate()
 
 void init()
 {
-    drawgrid = 0;
-    drawaxes = 0;
+    draw_grid = 0;
+    draw_axes = 0;
     angle = 0;
 
     // Normalize the direction vectors
@@ -510,6 +536,8 @@ void init()
 
     up_vector = crossProduct(look_direction_vector, right_vector);
     normalize(&up_vector);
+
+    resetBall();
 
     glClearColor(0, 0, 0, 0);
     glMatrixMode(GL_PROJECTION);

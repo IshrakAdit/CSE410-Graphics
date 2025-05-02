@@ -3,35 +3,46 @@
 #include <stdio.h>
 
 #define PI (2 * acos(0.0))
+#define CUBE_SIZE 120
+#define BALL_RADIUS 5.0
+#define NUMBER_OF_BALL_STRIPES 30
+#define GRAVITY 9.8
+#define RESTITUTION 0.75
+#define MIN_VELOCITY 0.1
+#define ARROW_SCALE 0.5
 
 struct point
 {
     double x, y, z;
 };
 
-// Initial camera position and direction vectors
+// Variables: Camera & directions
 point camera_position = {100, 100, 100};
-point look_direction_vector = {-1, -1, -1}; // Look direction (toward origin)
-point right_vector = {1, -1, 0};            // Right vector
-point up_vector = {0, 0, 1};                // Up vector
+point look_direction_vector = {-1, -1, -1};
+point right_vector = {1, -1, 0};
+point up_vector = {0, 0, 1};
 
+// Variables: Environment
+double angle = 0;
+
+// Variables: Cube
 point cube_center = {0, 0, 0};
 
-double angle = 0;
-int drawgrid = 0;
-int drawaxes = 0;
+// Variables: Ball position and velocity
+point ball_position = {0, 0, BALL_RADIUS};
+point ball_velocity = {0, 0, 0};
+point initial_velocity = {0, 0, 40};
+double ball_rotation_angle = 0;
+point ball_rotation_axix = {1, 0, 0};
+double initial_speed = 40.0;
 
-#define CUBE_SIZE 120
-#define BALL_RADIUS 5.0
-#define NUMBER_OF_BALL_STRIPES 30
+// Variables: simulation
+int draw_grid = 0;
+int draw_axes = 0;
+int simulation_running = 0;
+int show_velocity_arrow = 1;
 
-point ballPos = {0, 0, BALL_RADIUS};
-point ballVel = {0, 0, 0};
-point initialVel = {0, 0, 40};
-double ballRotationAngle = 0;
-point ballRotationAxis = {1, 0, 0};
-
-// Utility function to normalize a vector
+// Utility functions
 void normalize(point *p)
 {
     double len = sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
@@ -40,9 +51,39 @@ void normalize(point *p)
     p->z /= len;
 }
 
+double magnitude(point p)
+{
+    return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+}
+
+point crossProduct(point a, point b)
+{
+    point result;
+    result.x = a.y * b.z - a.z * b.y;
+    result.y = a.z * b.x - a.x * b.z;
+    result.z = a.x * b.y - a.y * b.x;
+    return result;
+}
+
+void rotate_vectors(point *a, point *b, float angle)
+{
+    point temp;
+    temp.x = a->x * cos(angle) + b->x * sin(angle);
+    temp.y = a->y * cos(angle) + b->y * sin(angle);
+    temp.z = a->z * cos(angle) + b->z * sin(angle);
+
+    b->x = b->x * cos(angle) - a->x * sin(angle);
+    b->y = b->y * cos(angle) - a->y * sin(angle);
+    b->z = b->z * cos(angle) - a->z * sin(angle);
+
+    *a = temp;
+    return;
+}
+
+// Draw functions
 void drawAxes()
 {
-    if (drawaxes == 1)
+    if (draw_axes == 1)
     {
         glColor3f(1.0, 1.0, 1.0);
         glBegin(GL_LINES);
@@ -63,7 +104,7 @@ void drawAxes()
 void drawGrid()
 {
     int i;
-    if (drawgrid == 1)
+    if (draw_grid == 1)
     {
         glColor3f(0.6, 0.6, 0.6); // grey
         glBegin(GL_LINES);
@@ -88,7 +129,7 @@ void drawFloor()
 {
     int i, j;
     int tileSize = 15;
-    double halfCube = CUBE_SIZE / 2;
+    double half_cube_size = CUBE_SIZE / 2;
     int numTiles = (int)(CUBE_SIZE / tileSize);
 
     glBegin(GL_QUADS);
@@ -97,8 +138,8 @@ void drawFloor()
         for (j = -numTiles / 2; j < numTiles / 2; j++)
         {
             // Make sure tiles stay within cube bounds
-            if (i * tileSize + tileSize > halfCube || i * tileSize < -halfCube ||
-                j * tileSize + tileSize > halfCube || j * tileSize < -halfCube)
+            if (i * tileSize + tileSize > half_cube_size || i * tileSize < -half_cube_size ||
+                j * tileSize + tileSize > half_cube_size || j * tileSize < -half_cube_size)
             {
                 continue;
             }
@@ -112,7 +153,7 @@ void drawFloor()
                 glColor3f(0.0, 0.0, 0.0); // Black
             }
 
-            // double floor_z_coordinate = -1 * halfCube;
+            // double floor_z_coordinate = -1 * half_cube_size;
             double floor_z_coordinate = 0;
 
             glVertex3f(i * tileSize, j * tileSize, floor_z_coordinate);
@@ -177,10 +218,10 @@ void drawCube()
 void drawBall(double radius, int slices, int stacks)
 {
     glPushMatrix();
-    glRotatef(ballRotationAngle * 180.0 / PI,
-              ballRotationAxis.x,
-              ballRotationAxis.y,
-              ballRotationAxis.z);
+    glRotatef(ball_rotation_angle * 180.0 / PI,
+              ball_rotation_axix.x,
+              ball_rotation_axix.y,
+              ball_rotation_axix.z);
 
     // Loop over vertical slices (longitude)
     for (int j = 0; j < slices; j++)
@@ -241,17 +282,43 @@ void drawBall(double radius, int slices, int stacks)
     glPopMatrix();
 }
 
+// Reset ball with random position and velocity
+void resetBall()
+{
+    int half_cube_size = CUBE_SIZE / 2;
+    int quarter_cube_size = half_cube_size / 2;
+
+    // Random position within the cube
+    ball_position.x = (double)(rand() % half_cube_size - quarter_cube_size);
+    ball_position.y = (double)(rand() % half_cube_size - quarter_cube_size);
+    ball_position.z = BALL_RADIUS;
+
+    // Random initial velocity in any direction
+    double theta = (double)(rand() % 360) * PI / 180.0;
+    double phi = (double)(rand() % 180) * PI / 180.0;
+
+    ball_velocity.x = initial_speed * sin(phi) * cos(theta);
+    ball_velocity.y = initial_speed * sin(phi) * sin(theta);
+    ball_velocity.z = initial_speed * cos(phi);
+
+    // No initial rotation/simulation
+    ball_rotation_angle = 0;
+    ball_rotation_axix.x = 1;
+    ball_rotation_axix.y = 0;
+    ball_rotation_axix.z = 0;
+
+    simulation_running = 0;
+}
+
 void drawSS()
 {
     glPushMatrix();
     glColor3f(0, 1, 0);
-    // glTranslatef(0, 0, 0);
-    // glRotatef(0, 1, 1, 1);
     drawCube();
     drawFloor();
 
     glPushMatrix();
-    glTranslatef(ballPos.x, ballPos.y, ballPos.z);
+    glTranslatef(ball_position.x, ball_position.y, ball_position.z);
     drawBall(BALL_RADIUS, NUMBER_OF_BALL_STRIPES, NUMBER_OF_BALL_STRIPES);
     glPopMatrix();
 
@@ -266,12 +333,6 @@ void adjustCameraToLookAtCube()
     direction.y = cube_center.y - camera_position.y;
     direction.z = cube_center.z - camera_position.z;
 
-    // double len = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-    // direction.x /= len;
-    // direction.y /= len;
-    // direction.z /= len;
-
-    // Set look_direction_vector to normalized direction
     look_direction_vector = direction;
     normalize(&look_direction_vector);
 
@@ -298,145 +359,85 @@ void keyboardListener(unsigned char key, int x, int y)
     switch (key)
     {
     case '1': // yaw right
-        temp.x = look_direction_vector.x * cos(-rate) + right_vector.x * sin(-rate);
-        temp.y = look_direction_vector.y * cos(-rate) + right_vector.y * sin(-rate);
-        temp.z = look_direction_vector.z * cos(-rate) + right_vector.z * sin(-rate);
-        right_vector.x = right_vector.x * cos(-rate) - look_direction_vector.x * sin(-rate);
-        right_vector.y = right_vector.y * cos(-rate) - look_direction_vector.y * sin(-rate);
-        right_vector.z = right_vector.z * cos(-rate) - look_direction_vector.z * sin(-rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &right_vector, (-1 * rate));
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
-        // Recalculate u to ensure orthogonality
-        up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-        up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-        up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+        up_vector = crossProduct(look_direction_vector, right_vector);
         normalize(&up_vector);
         break;
 
     case '2': // yaw left
-        temp.x = look_direction_vector.x * cos(rate) + right_vector.x * sin(rate);
-        temp.y = look_direction_vector.y * cos(rate) + right_vector.y * sin(rate);
-        temp.z = look_direction_vector.z * cos(rate) + right_vector.z * sin(rate);
-        right_vector.x = right_vector.x * cos(rate) - look_direction_vector.x * sin(rate);
-        right_vector.y = right_vector.y * cos(rate) - look_direction_vector.y * sin(rate);
-        right_vector.z = right_vector.z * cos(rate) - look_direction_vector.z * sin(rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &right_vector, rate);
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
-        // Recalculate u to ensure orthogonality
-        up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-        up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-        up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+        up_vector = crossProduct(look_direction_vector, right_vector);
         normalize(&up_vector);
         break;
 
     case '3': // pitch up
-        temp.x = look_direction_vector.x * cos(rate) + up_vector.x * sin(rate);
-        temp.y = look_direction_vector.y * cos(rate) + up_vector.y * sin(rate);
-        temp.z = look_direction_vector.z * cos(rate) + up_vector.z * sin(rate);
-        up_vector.x = up_vector.x * cos(rate) - look_direction_vector.x * sin(rate);
-        up_vector.y = up_vector.y * cos(rate) - look_direction_vector.y * sin(rate);
-        up_vector.z = up_vector.z * cos(rate) - look_direction_vector.z * sin(rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &up_vector, rate);
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
-        // Recalculate r to ensure orthogonality
-        right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
-        right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
-        right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
+        right_vector = crossProduct(up_vector, look_direction_vector);
         normalize(&right_vector);
         break;
 
     case '4': // pitch down
-        temp.x = look_direction_vector.x * cos(-rate) + up_vector.x * sin(-rate);
-        temp.y = look_direction_vector.y * cos(-rate) + up_vector.y * sin(-rate);
-        temp.z = look_direction_vector.z * cos(-rate) + up_vector.z * sin(-rate);
-        up_vector.x = up_vector.x * cos(-rate) - look_direction_vector.x * sin(-rate);
-        up_vector.y = up_vector.y * cos(-rate) - look_direction_vector.y * sin(-rate);
-        up_vector.z = up_vector.z * cos(-rate) - look_direction_vector.z * sin(-rate);
-        look_direction_vector = temp;
+        rotate_vectors(&look_direction_vector, &up_vector, (-1 * rate));
 
-        // Normalize vectors
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
-        // Recalculate r to ensure orthogonality
-        right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
-        right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
-        right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
+        right_vector = crossProduct(up_vector, look_direction_vector);
         normalize(&right_vector);
         break;
 
     case '5': // roll clockwise
-        temp.x = right_vector.x * cos(rate) + up_vector.x * sin(rate);
-        temp.y = right_vector.y * cos(rate) + up_vector.y * sin(rate);
-        temp.z = right_vector.z * cos(rate) + up_vector.z * sin(rate);
-        up_vector.x = up_vector.x * cos(rate) - right_vector.x * sin(rate);
-        up_vector.y = up_vector.y * cos(rate) - right_vector.y * sin(rate);
-        up_vector.z = up_vector.z * cos(rate) - right_vector.z * sin(rate);
-        right_vector = temp;
+        rotate_vectors(&right_vector, &up_vector, rate);
 
-        // Normalize vectors
         normalize(&right_vector);
         normalize(&up_vector);
 
-        // Recalculate l to ensure orthogonality
-        look_direction_vector.x = right_vector.y * up_vector.z - right_vector.z * up_vector.y;
-        look_direction_vector.y = right_vector.z * up_vector.x - right_vector.x * up_vector.z;
-        look_direction_vector.z = right_vector.x * up_vector.y - right_vector.y * up_vector.x;
+        look_direction_vector = crossProduct(right_vector, up_vector);
         normalize(&look_direction_vector);
         break;
 
     case '6': // roll counter-clockwise
-        temp.x = right_vector.x * cos(-rate) + up_vector.x * sin(-rate);
-        temp.y = right_vector.y * cos(-rate) + up_vector.y * sin(-rate);
-        temp.z = right_vector.z * cos(-rate) + up_vector.z * sin(-rate);
-        up_vector.x = up_vector.x * cos(-rate) - right_vector.x * sin(-rate);
-        up_vector.y = up_vector.y * cos(-rate) - right_vector.y * sin(-rate);
-        up_vector.z = up_vector.z * cos(-rate) - right_vector.z * sin(-rate);
-        right_vector = temp;
+        rotate_vectors(&right_vector, &up_vector, (-1 * rate));
 
-        // Normalize vectors
         normalize(&right_vector);
         normalize(&up_vector);
 
-        // Recalculate l to ensure orthogonality
-        look_direction_vector.x = right_vector.y * up_vector.z - right_vector.z * up_vector.y;
-        look_direction_vector.y = right_vector.z * up_vector.x - right_vector.x * up_vector.z;
-        look_direction_vector.z = right_vector.x * up_vector.y - right_vector.y * up_vector.x;
+        look_direction_vector = crossProduct(right_vector, up_vector);
         normalize(&look_direction_vector);
         break;
 
     case 'w':
-        // camera_position.x += up_vector.x * 2;
-        // camera_position.y += up_vector.y * 2;
         camera_position.z += up_vector.z * 2;
         adjustCameraToLookAtCube();
         break;
 
     case 's':
-        // camera_position.x -= up_vector.x * 2;
-        // camera_position.y -= up_vector.y * 2;
         camera_position.z -= up_vector.z * 2;
         adjustCameraToLookAtCube();
         break;
 
-    case 'd': // Toggle grid
-        drawgrid = 1 - drawgrid;
+    case 'r':
+        resetBall();
         break;
 
-    case 'a': // Toggle axes
-        drawaxes = 1 - drawaxes;
+    case 'd':
+        draw_grid = 1 - draw_grid;
+        break;
+
+    case 'a':
+        draw_axes = 1 - draw_axes;
         break;
     }
 }
@@ -484,13 +485,11 @@ void mouseListener(int button, int state, int x, int y)
     {
     case GLUT_LEFT_BUTTON:
         if (state == GLUT_DOWN)
-            drawaxes = 1 - drawaxes;
+            draw_axes = 1 - draw_axes;
         break;
     case GLUT_RIGHT_BUTTON:
         if (state == GLUT_DOWN)
-            drawgrid = 1 - drawgrid;
-        break;
-    case GLUT_MIDDLE_BUTTON:
+            draw_grid = 1 - draw_grid;
         break;
     }
 }
@@ -523,8 +522,8 @@ void animate()
 
 void init()
 {
-    drawgrid = 0;
-    drawaxes = 0;
+    draw_grid = 0;
+    draw_axes = 0;
     angle = 0;
 
     // Normalize the direction vectors
@@ -532,19 +531,13 @@ void init()
     normalize(&right_vector);
     normalize(&up_vector);
 
-    // Make sure the vectors are orthogonal
-    // First, make sure right is perpendicular to look
-    // This is the cross product of world-up and look
-    right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
-    right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
-    right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
+    right_vector = crossProduct(up_vector, look_direction_vector);
     normalize(&right_vector);
 
-    // Then recompute up as cross product of look and right
-    up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-    up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-    up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+    up_vector = crossProduct(look_direction_vector, right_vector);
     normalize(&up_vector);
+
+    resetBall();
 
     glClearColor(0, 0, 0, 0);
     glMatrixMode(GL_PROJECTION);

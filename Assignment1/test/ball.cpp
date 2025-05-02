@@ -78,21 +78,20 @@ void resetBall()
     ballPos.y = (double)(rand() % 80 - 40);
     ballPos.z = BALL_RADIUS + (double)(rand() % 20);
 
-    // Random initial velocity in any direction (not just upward)
-    double theta = (double)(rand() % 360) * pi / 180.0; // Horizontal angle
-    double phi = (double)(rand() % 180) * pi / 180.0;   // Vertical angle
+    // Random initial velocity in any direction
+    double theta = (double)(rand() % 360) * pi / 180.0;
+    double phi = (double)(rand() % 180) * pi / 180.0;
 
     ballVel.x = initialSpeed * sin(phi) * cos(theta);
     ballVel.y = initialSpeed * sin(phi) * sin(theta);
     ballVel.z = initialSpeed * cos(phi);
 
-    // Reset rotation
+    // No initial rotation/simulation
     ballRotationAngle = 0;
     ballRotationAxis.x = 1;
     ballRotationAxis.y = 0;
     ballRotationAxis.z = 0;
 
-    // Stop simulation
     simRunning = 0;
 }
 
