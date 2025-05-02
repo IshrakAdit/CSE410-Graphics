@@ -282,6 +282,57 @@ void drawBall(double radius, int slices, int stacks)
     glPopMatrix();
 }
 
+void drawVelocityArrow()
+{
+    if (!show_velocity_arrow || magnitude(ball_velocity) < 0.1)
+    {
+        return;
+    }
+
+    point normal_velocity = ball_velocity;
+    normalize(&normal_velocity);
+
+    double arrowLength = BALL_RADIUS * 2 * ARROW_SCALE * magnitude(ball_velocity) / initial_speed;
+
+    // Draw arrow line
+    glColor3f(1.0, 1.0, 0.0); // Yellow
+    glLineWidth(2.0);
+    glBegin(GL_LINES);
+    glVertex3f(ball_position.x, ball_position.y, ball_position.z);
+    glVertex3f(ball_position.x + normal_velocity.x * arrowLength,
+               ball_position.y + normal_velocity.y * arrowLength,
+               ball_position.z + normal_velocity.z * arrowLength);
+    glEnd();
+    glLineWidth(1.0);
+
+    // Draw arrow head
+    glPushMatrix();
+    glTranslatef(ball_position.x + normal_velocity.x * arrowLength,
+                 ball_position.y + normal_velocity.y * arrowLength,
+                 ball_position.z + normal_velocity.z * arrowLength);
+
+    // Rotate to point in velocity direction
+    point up = {0, 0, 1};
+    double angle = acos(normal_velocity.z) * 180.0 / PI;
+    point rotation_axix = crossProduct(up, normal_velocity);
+    if (magnitude(rotation_axix) < 0.001)
+    {
+        rotation_axix.x = 1;
+        rotation_axix.y = 0;
+        rotation_axix.z = 0;
+    }
+    normalize(&rotation_axix);
+
+    glRotatef(angle, rotation_axix.x, rotation_axix.y, rotation_axix.z);
+
+    // Draw the cone
+    GLUquadric *quadric = gluNewQuadric();
+    gluCylinder(quadric, BALL_RADIUS * 0.3 * ARROW_SCALE, 0, BALL_RADIUS * ARROW_SCALE, 10, 1);
+    gluDeleteQuadric(quadric);
+
+    glPopMatrix();
+}
+
 // Reset ball with random position and velocity
 void resetBall()
 {
@@ -321,6 +372,8 @@ void drawSS()
     glTranslatef(ball_position.x, ball_position.y, ball_position.z);
     drawBall(BALL_RADIUS, NUMBER_OF_BALL_STRIPES, NUMBER_OF_BALL_STRIPES);
     glPopMatrix();
+
+    drawVelocityArrow();
 
     glPopMatrix();
 }
@@ -430,6 +483,10 @@ void keyboardListener(unsigned char key, int x, int y)
 
     case 'r':
         resetBall();
+        break;
+
+    case 'v':
+        show_velocity_arrow = 1 - show_velocity_arrow;
         break;
 
     case 'd':
