@@ -9,19 +9,19 @@ struct point
     double x, y, z;
 };
 
-// Initial camera position and direction vectors
+// Initial camera position and direction vectors (renamed for clarity)
 point camera_position = {100, 100, 100};
 point look_direction_vector = {-1, -1, -1}; // Look direction (toward origin)
 point right_vector = {1, -1, 0};            // Right vector
 point up_vector = {0, 0, 1};                // Up vector
 
+// Cube position (center of the scene)
 point cube_center = {0, 0, 0};
+double cube_size = 60;
 
 double angle = 0;
 int drawgrid = 0;
 int drawaxes = 0;
-
-int CUBE_SIZE = 120;
 
 // Utility function to normalize a vector
 void normalize(point *p)
@@ -76,93 +76,87 @@ void drawGrid()
     }
 }
 
-void drawFloor()
+// Function to draw a checkered floor
+void drawCheckeredFloor(double size, int divisions)
 {
+    double unit = size * 2 / divisions;
     int i, j;
-    int tileSize = 15;
-    double halfCube = CUBE_SIZE / 2;
-    int numTiles = (int)(CUBE_SIZE / tileSize);
+    int isWhite;
 
     glBegin(GL_QUADS);
-    for (i = -numTiles / 2; i < numTiles / 2; i++)
+    for (i = 0; i < divisions; i++)
     {
-        for (j = -numTiles / 2; j < numTiles / 2; j++)
+        for (j = 0; j < divisions; j++)
         {
-            // Make sure tiles stay within cube bounds
-            if (i * tileSize + tileSize > halfCube || i * tileSize < -halfCube ||
-                j * tileSize + tileSize > halfCube || j * tileSize < -halfCube)
-            {
-                continue;
-            }
+            // Alternate black and white
+            isWhite = (i + j) % 2;
 
-            if ((i + j) % 2 == 0)
-            {
+            if (isWhite)
                 glColor3f(1.0, 1.0, 1.0); // White
-            }
             else
-            {
                 glColor3f(0.0, 0.0, 0.0); // Black
-            }
 
-            double floor_z_coordinate = -1 * halfCube;
+            double x1 = -size + i * unit;
+            double y1 = -size + j * unit;
+            double x2 = x1 + unit;
+            double y2 = y1 + unit;
 
-            glVertex3f(i * tileSize, j * tileSize, floor_z_coordinate);
-            glVertex3f(i * tileSize, (j + 1) * tileSize, floor_z_coordinate);
-            glVertex3f((i + 1) * tileSize, (j + 1) * tileSize, floor_z_coordinate);
-            glVertex3f((i + 1) * tileSize, j * tileSize, floor_z_coordinate);
+            // Draw the square at z = -size (bottom face of cube)
+            glVertex3f(x1, y1, -size);
+            glVertex3f(x2, y1, -size);
+            glVertex3f(x2, y2, -size);
+            glVertex3f(x1, y2, -size);
         }
     }
     glEnd();
 }
 
-void drawCube()
+void drawCube(double a)
 {
-    double a = CUBE_SIZE / 2;
     glBegin(GL_QUADS);
     {
         glColor3f(1, 0, 0);
-        // Top
-        glVertex3f(a, a, a);
-        glVertex3f(a, -a, a);
-        glVertex3f(-a, -a, a);
-        glVertex3f(-a, a, a);
-
-        // glColor3f(1, 0, 0);
-        // Bottom -> Covered by floor
-        // glVertex3f(a, a, -a);
-        // glVertex3f(a, -a, -a);
-        // glVertex3f(-a, -a, -a);
-        // glVertex3f(-a, a, -a);
-
-        glColor3f(0, 1, 0);
         // Front
         glVertex3f(a, a, a);
         glVertex3f(a, -a, a);
+        glVertex3f(-a, -a, a);
+        glVertex3f(-a, a, a);
+
+        glColor3f(1, 0, 0);
+        // Back
+        glVertex3f(a, a, -a);
+        glVertex3f(a, -a, -a);
+        glVertex3f(-a, -a, -a);
+        glVertex3f(-a, a, -a);
+
+        glColor3f(0, 1, 0);
+        // Right
+        glVertex3f(a, a, a);
+        glVertex3f(a, -a, a);
         glVertex3f(a, -a, -a);
         glVertex3f(a, a, -a);
 
         glColor3f(0, 1, 0);
-        // Back
+        // Left
         glVertex3f(-a, a, a);
         glVertex3f(-a, -a, a);
         glVertex3f(-a, -a, -a);
         glVertex3f(-a, a, -a);
 
         glColor3f(0, 0, 1);
-        // Right
+        // Top
         glVertex3f(a, a, a);
         glVertex3f(-a, a, a);
         glVertex3f(-a, a, -a);
         glVertex3f(a, a, -a);
 
-        glColor3f(0, 0, 1);
-        // Left
-        glVertex3f(a, -a, a);
-        glVertex3f(-a, -a, a);
-        glVertex3f(-a, -a, -a);
-        glVertex3f(a, -a, -a);
+        // Bottom face is handled by checkered floor
+        // Don't draw the original bottom face
     }
     glEnd();
+
+    // Draw checkered floor for the bottom face
+    drawCheckeredFloor(a, 8); // 8x8 checkered pattern
 }
 
 void drawSS()
@@ -171,41 +165,40 @@ void drawSS()
     glColor3f(0, 1, 0);
     // glTranslatef(0, 0, 0);
     // glRotatef(0, 1, 1, 1);
-    drawCube();
-    drawFloor();
+    drawCube(cube_size);
     glPopMatrix();
 }
 
 // Function to adjust camera to always look at the cube
 void adjustCameraToLookAtCube()
 {
+    // Calculate direction vector from camera to cube
     point direction;
     direction.x = cube_center.x - camera_position.x;
     direction.y = cube_center.y - camera_position.y;
     direction.z = cube_center.z - camera_position.z;
 
-    // double len = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
-    // direction.x /= len;
-    // direction.y /= len;
-    // direction.z /= len;
+    // Normalize this direction
+    double len = sqrt(direction.x * direction.x + direction.y * direction.y + direction.z * direction.z);
+    direction.x /= len;
+    direction.y /= len;
+    direction.z /= len;
 
-    // Set look_direction_vector to normalized direction
+    // Set look_direction_vector to this direction
     look_direction_vector = direction;
-    normalize(&look_direction_vector);
 
-    // No need adjust the right and up vectors
     // Recalculate right vector (assuming world up is (0,0,1))
-    // point world_up = {0, 0, 1};
-    // right_vector.x = direction.y * world_up.z - direction.z * world_up.y;
-    // right_vector.y = direction.z * world_up.x - direction.x * world_up.z;
-    // right_vector.z = direction.x * world_up.y - direction.y * world_up.x;
-    // normalize(&right_vector);
+    point world_up = {0, 0, 1};
+    right_vector.x = direction.y * world_up.z - direction.z * world_up.y;
+    right_vector.y = direction.z * world_up.x - direction.x * world_up.z;
+    right_vector.z = direction.x * world_up.y - direction.y * world_up.x;
+    normalize(&right_vector);
 
-    // // Recalculate up vector to ensure orthogonality
-    // up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-    // up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-    // up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
-    // normalize(&up_vector);
+    // Recalculate up vector to ensure orthogonality
+    up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
+    up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
+    up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+    normalize(&up_vector);
 }
 
 void keyboardListener(unsigned char key, int x, int y)
@@ -228,7 +221,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
-        // Recalculate u to ensure orthogonality
+        // Recalculate up_vector to ensure orthogonality
         up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
         up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
         up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
@@ -248,7 +241,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
-        // Recalculate u to ensure orthogonality
+        // Recalculate up_vector to ensure orthogonality
         up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
         up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
         up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
@@ -268,7 +261,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
-        // Recalculate r to ensure orthogonality
+        // Recalculate right_vector to ensure orthogonality
         right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
         right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
         right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
@@ -288,7 +281,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
-        // Recalculate r to ensure orthogonality
+        // Recalculate right_vector to ensure orthogonality
         right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
         right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
         right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
@@ -308,7 +301,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&right_vector);
         normalize(&up_vector);
 
-        // Recalculate l to ensure orthogonality
+        // Recalculate look_direction_vector to ensure orthogonality
         look_direction_vector.x = right_vector.y * up_vector.z - right_vector.z * up_vector.y;
         look_direction_vector.y = right_vector.z * up_vector.x - right_vector.x * up_vector.z;
         look_direction_vector.z = right_vector.x * up_vector.y - right_vector.y * up_vector.x;
@@ -328,24 +321,20 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&right_vector);
         normalize(&up_vector);
 
-        // Recalculate l to ensure orthogonality
+        // Recalculate look_direction_vector to ensure orthogonality
         look_direction_vector.x = right_vector.y * up_vector.z - right_vector.z * up_vector.y;
         look_direction_vector.y = right_vector.z * up_vector.x - right_vector.x * up_vector.z;
         look_direction_vector.z = right_vector.x * up_vector.y - right_vector.y * up_vector.x;
         normalize(&look_direction_vector);
         break;
 
-    case 'w':
-        // camera_position.x += up_vector.x * 2;
-        // camera_position.y += up_vector.y * 2;
-        camera_position.z += up_vector.z * 2;
+    case 'w': // Move camera up while looking at cube
+        camera_position.z += 2;
         adjustCameraToLookAtCube();
         break;
 
-    case 's':
-        // camera_position.x -= up_vector.x * 2;
-        // camera_position.y -= up_vector.y * 2;
-        camera_position.z -= up_vector.z * 2;
+    case 's': // Move camera down while looking at cube
+        camera_position.z -= 2;
         adjustCameraToLookAtCube();
         break;
 
@@ -367,31 +356,37 @@ void specialKeyListener(int key, int x, int y)
         camera_position.x += look_direction_vector.x * 2;
         camera_position.y += look_direction_vector.y * 2;
         camera_position.z += look_direction_vector.z * 2;
+        adjustCameraToLookAtCube();
         break;
     case GLUT_KEY_DOWN:
         camera_position.x -= look_direction_vector.x * 2;
         camera_position.y -= look_direction_vector.y * 2;
         camera_position.z -= look_direction_vector.z * 2;
+        adjustCameraToLookAtCube();
         break;
     case GLUT_KEY_RIGHT:
         camera_position.x += right_vector.x * 2;
         camera_position.y += right_vector.y * 2;
         camera_position.z += right_vector.z * 2;
+        adjustCameraToLookAtCube();
         break;
     case GLUT_KEY_LEFT:
         camera_position.x -= right_vector.x * 2;
         camera_position.y -= right_vector.y * 2;
         camera_position.z -= right_vector.z * 2;
+        adjustCameraToLookAtCube();
         break;
     case GLUT_KEY_PAGE_UP:
         camera_position.x += up_vector.x * 2;
         camera_position.y += up_vector.y * 2;
         camera_position.z += up_vector.z * 2;
+        adjustCameraToLookAtCube();
         break;
     case GLUT_KEY_PAGE_DOWN:
         camera_position.x -= up_vector.x * 2;
         camera_position.y -= up_vector.y * 2;
         camera_position.z -= up_vector.z * 2;
+        adjustCameraToLookAtCube();
         break;
     }
 }
@@ -421,7 +416,9 @@ void display()
     glLoadIdentity();
 
     gluLookAt(camera_position.x, camera_position.y, camera_position.z,
-              camera_position.x + look_direction_vector.x, camera_position.y + look_direction_vector.y, camera_position.z + look_direction_vector.z,
+              camera_position.x + look_direction_vector.x,
+              camera_position.y + look_direction_vector.y,
+              camera_position.z + look_direction_vector.z,
               up_vector.x, up_vector.y, up_vector.z);
 
     glMatrixMode(GL_MODELVIEW);
@@ -464,6 +461,9 @@ void init()
     up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
     normalize(&up_vector);
 
+    // Initialize camera to look at cube
+    adjustCameraToLookAtCube();
+
     glClearColor(0, 0, 0, 0);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -477,7 +477,7 @@ int main(int argc, char **argv)
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);
 
-    glutCreateWindow("Camera Controls - OpenGL");
+    glutCreateWindow("Enhanced Camera Controls - OpenGL");
 
     init();
     glEnable(GL_DEPTH_TEST);

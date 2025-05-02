@@ -73,10 +73,10 @@ void resetBall()
 {
     double halfCube = CUBE_SIZE / 2;
 
-    // Random position within the cube, keeping it away from the edges
-    ballPos.x = (double)(rand() % (int)(halfCube - 2 * BALL_RADIUS)) - (halfCube / 2 - BALL_RADIUS);
-    ballPos.y = (double)(rand() % (int)(halfCube - 2 * BALL_RADIUS)) - (halfCube / 2 - BALL_RADIUS);
-    ballPos.z = (double)(rand() % (int)(halfCube - 2 * BALL_RADIUS)) + BALL_RADIUS;
+    // Random position within the cube
+    ballPos.x = (double)(rand() % 80 - 40);
+    ballPos.y = (double)(rand() % 80 - 40);
+    ballPos.z = BALL_RADIUS + (double)(rand() % 20);
 
     // Random initial velocity in any direction (not just upward)
     double theta = (double)(rand() % 360) * pi / 180.0; // Horizontal angle
@@ -220,6 +220,73 @@ void drawCube()
         glVertex3f(-a, -a, 0);
     }
     glEnd();
+}
+
+void drawBall(double radius, int slices, int stacks)
+{
+    glPushMatrix();
+    glRotatef(ballRotationAngle * 180.0 / pi,
+              ballRotationAxis.x,
+              ballRotationAxis.y,
+              ballRotationAxis.z);
+
+    // Loop over vertical slices (longitude)
+    for (int j = 0; j < slices; j++)
+    {
+        double lng0 = 2 * pi * (double)(j) / slices;
+        double lng1 = 2 * pi * (double)(j + 1) / slices;
+
+        // Split into upper and lower hemispheres
+        // ----- UPPER HALF -----
+        glBegin(GL_QUAD_STRIP);
+        for (int i = 0; i <= stacks / 2; i++) // From equator up to top
+        {
+            double lat = pi * (-0.5 + (double)i / stacks);
+            double z = sin(lat);
+            double r = cos(lat);
+
+            double x0 = cos(lng0);
+            double y0 = sin(lng0);
+            double x1 = cos(lng1);
+            double y1 = sin(lng1);
+
+            // Coloring upper half
+            if (j % 2 == 0)
+                glColor3f(0.9, 0.1, 0.1); // Red
+            else
+                glColor3f(0.1, 0.9, 0.1); // Green
+
+            glVertex3f(x0 * r * radius, y0 * r * radius, z * radius);
+            glVertex3f(x1 * r * radius, y1 * r * radius, z * radius);
+        }
+        glEnd();
+
+        // ----- LOWER HALF -----
+        glBegin(GL_QUAD_STRIP);
+        for (int i = stacks / 2; i <= stacks; i++) // From equator down to bottom
+        {
+            double lat = pi * (-0.5 + (double)i / stacks);
+            double z = sin(lat);
+            double r = cos(lat);
+
+            double x0 = cos(lng0);
+            double y0 = sin(lng0);
+            double x1 = cos(lng1);
+            double y1 = sin(lng1);
+
+            // Coloring lower half
+            if (j % 2 == 0)
+                glColor3f(0.1, 0.9, 0.1); // Green
+            else
+                glColor3f(0.9, 0.1, 0.1); // Red
+
+            glVertex3f(x0 * r * radius, y0 * r * radius, z * radius);
+            glVertex3f(x1 * r * radius, y1 * r * radius, z * radius);
+        }
+        glEnd();
+    }
+
+    glPopMatrix();
 }
 
 // Draw a sphere representing the ball with red and green stripes
@@ -445,7 +512,8 @@ void drawSS()
     // Draw the ball at its current position
     glPushMatrix();
     glTranslatef(ballPos.x, ballPos.y, ballPos.z);
-    drawSphere(BALL_RADIUS, 20, 20);
+    int number_of_ball_stripes = 30;
+    drawBall(BALL_RADIUS, number_of_ball_stripes, number_of_ball_stripes);
     glPopMatrix();
 
     // Draw velocity arrow
