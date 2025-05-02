@@ -3,35 +3,46 @@
 #include <stdio.h>
 
 #define PI (2 * acos(0.0))
+#define CUBE_SIZE 120
+#define BALL_RADIUS 5.0
+#define NUMBER_OF_BALL_STRIPES 30
+#define GRAVITY 9.8
+#define RESTITUTION 0.75
+#define MIN_VELOCITY 0.1
+#define ARROW_SCALE 0.5
 
 struct point
 {
     double x, y, z;
 };
 
-// Initial camera position and direction vectors
+// Variables: Camera & directions
 point camera_position = {100, 100, 100};
-point look_direction_vector = {-1, -1, -1}; // Look direction (toward origin)
-point right_vector = {1, -1, 0};            // Right vector
-point up_vector = {0, 0, 1};                // Up vector
+point look_direction_vector = {-1, -1, -1};
+point right_vector = {1, -1, 0};
+point up_vector = {0, 0, 1};
 
+// Variables: Environment
+double angle = 0;
+
+// Variables: Cube
 point cube_center = {0, 0, 0};
 
-double angle = 0;
-int drawgrid = 0;
-int drawaxes = 0;
-
-#define CUBE_SIZE 120
-#define BALL_RADIUS 5.0
-#define NUMBER_OF_BALL_STRIPES 30
-
+// Variables: Ball position and velocity
 point ballPos = {0, 0, BALL_RADIUS};
 point ballVel = {0, 0, 0};
 point initialVel = {0, 0, 40};
 double ballRotationAngle = 0;
 point ballRotationAxis = {1, 0, 0};
+double initialSpeed = 40.0;
 
-// Utility function to normalize a vector
+// Variables: simulation
+int drawgrid = 0;
+int drawaxes = 0;
+int simRunning = 0;
+int showVelocityArrow = 1;
+
+// Utility functions
 void normalize(point *p)
 {
     double len = sqrt(p->x * p->x + p->y * p->y + p->z * p->z);
@@ -40,6 +51,21 @@ void normalize(point *p)
     p->z /= len;
 }
 
+double magnitude(point p)
+{
+    return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+}
+
+point crossProduct(point a, point b)
+{
+    point result;
+    result.x = a.y * b.z - a.z * b.y;
+    result.y = a.z * b.x - a.x * b.z;
+    result.z = a.x * b.y - a.y * b.x;
+    return result;
+}
+
+// Draw functions
 void drawAxes()
 {
     if (drawaxes == 1)
@@ -310,10 +336,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
-        // Recalculate u to ensure orthogonality
-        up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-        up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-        up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+        up_vector = crossProduct(look_direction_vector, right_vector);
         normalize(&up_vector);
         break;
 
@@ -330,10 +353,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&right_vector);
 
-        // Recalculate u to ensure orthogonality
-        up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-        up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-        up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+        up_vector = crossProduct(look_direction_vector, right_vector);
         normalize(&up_vector);
         break;
 
@@ -350,10 +370,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
-        // Recalculate r to ensure orthogonality
-        right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
-        right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
-        right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
+        right_vector = crossProduct(up_vector, look_direction_vector);
         normalize(&right_vector);
         break;
 
@@ -370,10 +387,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         normalize(&up_vector);
 
-        // Recalculate r to ensure orthogonality
-        right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
-        right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
-        right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
+        right_vector = crossProduct(up_vector, look_direction_vector);
         normalize(&right_vector);
         break;
 
@@ -390,10 +404,7 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&right_vector);
         normalize(&up_vector);
 
-        // Recalculate l to ensure orthogonality
-        look_direction_vector.x = right_vector.y * up_vector.z - right_vector.z * up_vector.y;
-        look_direction_vector.y = right_vector.z * up_vector.x - right_vector.x * up_vector.z;
-        look_direction_vector.z = right_vector.x * up_vector.y - right_vector.y * up_vector.x;
+        look_direction_vector = crossProduct(right_vector, up_vector);
         normalize(&look_direction_vector);
         break;
 
@@ -410,23 +421,16 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&right_vector);
         normalize(&up_vector);
 
-        // Recalculate l to ensure orthogonality
-        look_direction_vector.x = right_vector.y * up_vector.z - right_vector.z * up_vector.y;
-        look_direction_vector.y = right_vector.z * up_vector.x - right_vector.x * up_vector.z;
-        look_direction_vector.z = right_vector.x * up_vector.y - right_vector.y * up_vector.x;
+        look_direction_vector = crossProduct(right_vector, up_vector);
         normalize(&look_direction_vector);
         break;
 
     case 'w':
-        // camera_position.x += up_vector.x * 2;
-        // camera_position.y += up_vector.y * 2;
         camera_position.z += up_vector.z * 2;
         adjustCameraToLookAtCube();
         break;
 
     case 's':
-        // camera_position.x -= up_vector.x * 2;
-        // camera_position.y -= up_vector.y * 2;
         camera_position.z -= up_vector.z * 2;
         adjustCameraToLookAtCube();
         break;
@@ -532,18 +536,10 @@ void init()
     normalize(&right_vector);
     normalize(&up_vector);
 
-    // Make sure the vectors are orthogonal
-    // First, make sure right is perpendicular to look
-    // This is the cross product of world-up and look
-    right_vector.x = up_vector.y * look_direction_vector.z - up_vector.z * look_direction_vector.y;
-    right_vector.y = up_vector.z * look_direction_vector.x - up_vector.x * look_direction_vector.z;
-    right_vector.z = up_vector.x * look_direction_vector.y - up_vector.y * look_direction_vector.x;
+    right_vector = crossProduct(up_vector, look_direction_vector);
     normalize(&right_vector);
 
-    // Then recompute up as cross product of look and right
-    up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-    up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-    up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
+    up_vector = crossProduct(look_direction_vector, right_vector);
     normalize(&up_vector);
 
     glClearColor(0, 0, 0, 0);
