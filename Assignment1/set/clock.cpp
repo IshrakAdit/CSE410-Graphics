@@ -3,23 +3,23 @@
 #include <stdio.h>
 #include <time.h>
 
-#define PI 3.14159265358979323846
+#define PI (2 * acos(0.0))
 
-// Clock dimensions
+// Variables: Clock dimensions
 const float CLOCK_RADIUS = 55.0f;
 const float HOUR_HAND_LENGTH = 20.0f;
 const float MINUTE_HAND_LENGTH = 30.0f;
 const float SECOND_HAND_LENGTH = 40.0f;
 
-const float HOUR_HAND_WIDTH = 3.0f;
-const float MINUTE_HAND_WIDTH = 2.0f;
-const float SECOND_HAND_WIDTH = 1.0f;
+const float HOUR_HAND_WIDTH = 4.0f;
+const float MINUTE_HAND_WIDTH = 3.0f;
+const float SECOND_HAND_WIDTH = 2.0f;
 
 // Clock center position
 float centerX = 0.0f;
 float centerY = 0.0f;
 
-// Function to draw a circle using OpenGL lines
+// Draw Functions
 void drawCircle(float cx, float cy, float radius, int segments)
 {
     glBegin(GL_LINE_LOOP);
@@ -33,12 +33,9 @@ void drawCircle(float cx, float cy, float radius, int segments)
     glEnd();
 }
 
-// Draw clock markers on the clock face
 void drawClockMarkers()
 {
     // hour markers
-    // glLineWidth(3.0f);
-
     int HOUR_MARKER_START = 10;
     int HOUR_MARKER_END = 3;
 
@@ -58,9 +55,7 @@ void drawClockMarkers()
     }
     glEnd();
 
-    // Draw minute markers (thinner lines)
-    // glLineWidth(1.0f);
-
+    // minute markers
     int MINUTE_MARKER_START = 6;
     int MINUTE_MARKER_END = 3;
 
@@ -69,7 +64,7 @@ void drawClockMarkers()
 
     for (int minute = 0; minute < 60; minute++)
     {
-        // Skip positions where hour markers are placed
+        // Skipping positions where hour markers are placed
         if (minute % 5 == 0)
             continue;
 
@@ -83,34 +78,6 @@ void drawClockMarkers()
         glVertex2f(centerX + innerX, centerY + innerY);
     }
     glEnd();
-}
-
-// Draw the clock face and rim
-void drawClockFace()
-{
-    // Draw outer rim
-    // glLineWidth(2.0f);
-    glColor3f(1.0f, 1.0f, 1.0f);
-    drawCircle(centerX, centerY, CLOCK_RADIUS, 100);
-
-    // Draw inner face
-    // glColor3f(0.2f, 0.2f, 0.2f);
-    // glBegin(GL_POLYGON);
-    // for (int i = 0; i < 100; i++)
-    // {
-    //     float theta = 2.0f * PI * (float)i / 100.0f;
-    //     float x = (CLOCK_RADIUS - 2) * cosf(theta);
-    //     float y = (CLOCK_RADIUS - 2) * sinf(theta);
-    //     glVertex2f(x + centerX, y + centerY);
-    // }
-    // glEnd();
-
-    // Draw center circle
-    // glColor3f(0.8f, 0.8f, 0.8f);
-    // drawCircle(centerX, centerY, 3.0f, 20);
-
-    // Draw hour and minute markers
-    drawClockMarkers();
 }
 
 void drawSquare(double a, float r, float g, float b)
@@ -144,15 +111,26 @@ void drawHand(float angle, float length, float width, float r, float g, float b)
 
     glPushMatrix();
     glTranslatef(centerX + x, centerY + y, 0);
-    drawSquare(1.5, r, g, b);
+    drawSquare(2, r, g, b);
     glPopMatrix();
+}
+
+void drawClock(float hour_angle, float minute_angle, float second_angle)
+{
+    glColor3f(1.0f, 1.0f, 1.0f);
+    drawCircle(centerX, centerY, CLOCK_RADIUS, 100);
+
+    drawClockMarkers();
+
+    drawHand(hour_angle, HOUR_HAND_LENGTH, HOUR_HAND_WIDTH, 1.0f, 1.0f, 1.0f);
+    drawHand(minute_angle, MINUTE_HAND_LENGTH, MINUTE_HAND_WIDTH, 1.0f, 1.0f, 1.0f);
+    drawHand(second_angle, SECOND_HAND_LENGTH, SECOND_HAND_WIDTH, 1.0f, 0.0f, 0.0f);
 }
 
 void display()
 {
     glClear(GL_COLOR_BUFFER_BIT);
 
-    // Get current time
     time_t rawtime;
     struct tm *timeinfo;
     time(&rawtime);
@@ -162,52 +140,25 @@ void display()
     int minute = timeinfo->tm_min;
     int second = timeinfo->tm_sec;
 
-    // Convert to angles
-    float hourAngle = (hour % 12) * 30.0f + (minute / 60.0f) * 30.0f; // 30 degrees per hour
-    float minuteAngle = minute * 6.0f + (second / 60.0f) * 6.0f;      // 6 degrees per minute
-    float secondAngle = second * 6.0f;                                // 6 degrees per second
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    float milliseconds = ts.tv_nsec / 1000000.0f;
 
-    // Draw the clock face
-    drawClockFace();
+    float hour_angle = (hour % 12) * 30.0f + (minute / 60.0f) * 30.0f;
+    float minute_angle = minute * 6.0f;
+    float second_angle = second * 6.0f + (milliseconds / 1000.0f) * 6.0f;
 
-    // Draw the hands
-    drawHand(hourAngle, HOUR_HAND_LENGTH, HOUR_HAND_WIDTH, 1.0f, 1.0f, 1.0f);
-    drawHand(minuteAngle, MINUTE_HAND_LENGTH, MINUTE_HAND_WIDTH, 1.0f, 1.0f, 1.0f);
-    drawHand(secondAngle, SECOND_HAND_LENGTH, SECOND_HAND_WIDTH, 1.0f, 0.0f, 0.0f);
+    drawClock(hour_angle, minute_angle, second_angle);
 
     glutSwapBuffers();
 }
 
-// Reshape function to maintain aspect ratio
-void reshape(int width, int height)
-{
-    float aspectRatio = (float)width / (float)height;
-
-    glViewport(0, 0, width, height);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-
-    if (width >= height)
-    {
-        gluOrtho2D(-100 * aspectRatio, 100 * aspectRatio, -100, 100);
-    }
-    else
-    {
-        gluOrtho2D(-100, 100, -100 / aspectRatio, 100 / aspectRatio);
-    }
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-}
-
-// Timer function for animation
 void timer(int value)
 {
     glutPostRedisplay();
-    glutTimerFunc(16, timer, 0); // ~60 FPS refresh rate
+    glutTimerFunc(16, timer, 0);
 }
 
-// Initialize OpenGL settings
 void init()
 {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -226,7 +177,7 @@ int main(int argc, char **argv)
 
     init();
     glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
+    // glutReshapeFunc(reshape);
     glutTimerFunc(0, timer, 0);
 
     glutMainLoop();
