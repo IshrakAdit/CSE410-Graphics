@@ -3,36 +3,43 @@
 #include <stdio.h>
 
 #define PI (2 * acos(0.0))
-#define CUBE_SIZE 120
-#define BALL_RADIUS 5.0
+#define CUBE_SIZE 100
+#define BALL_RADIUS 4.0
 #define NUMBER_OF_BALL_STRIPES 30
 #define GRAVITY 9.8
 #define RESTITUTION 0.75
-#define MIN_VELOCITY 0.1
-#define ARROW_SCALE 0.5
+#define MIN_VELOCITY 2
+#define ARROW_SCALE 2
 
+// Support structures
 struct point
 {
     double x, y, z;
 };
 
 // Variables: Camera & directions
-point camera_position = {100, 100, 100};
+point camera_position = {70, 70, 80};
 point look_direction_vector = {-1, -1, -1};
 point right_vector = {1, -1, 0};
 point up_vector = {0, 0, 1};
+point z_vector = {0, 0, 1};
 
 // Variables: Environment
-double angle = 0;
+double animation_angle = 0;
 
 // Variables: Cube
 point cube_center = {0, 0, 0};
 
 // Variables: Ball position and velocity
 point ball_position = {0, 0, BALL_RADIUS};
+
+// Variables: Ball velocity
 point ball_velocity = {0, 0, 0};
-point initial_velocity = {0, 0, 80};
-double initial_speed = 80.0;
+point initial_velocity = {0, 0, 30};
+double initial_speed = 30.0;
+
+// Variables: Ball movement
+double z_axis_shift = 8;
 
 // Variables: Ball rotation
 double ball_rotation_angle = 0;
@@ -58,6 +65,11 @@ double magnitude(point p)
     return sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 }
 
+double magnitude(double a, double b, double c)
+{
+    return sqrt(a * a + b * b + c * c);
+}
+
 point crossProduct(point a, point b)
 {
     point result;
@@ -80,6 +92,33 @@ void rotate_vectors(point *a, point *b, float angle)
 
     *a = temp;
     return;
+}
+
+point rotate_vector(point v, point axis, double angle)
+{
+    normalize(&axis);
+
+    point v_rot;
+    double cos_theta = cos(angle);
+    double sin_theta = sin(angle);
+
+    point axis_cross_v = crossProduct(axis, v);
+
+    double axis_dot_v = axis.x * v.x + axis.y * v.y + axis.z * v.z;
+
+    v_rot.x = v.x * cos_theta +
+              axis_cross_v.x * sin_theta +
+              axis.x * axis_dot_v * (1 - cos_theta);
+
+    v_rot.y = v.y * cos_theta +
+              axis_cross_v.y * sin_theta +
+              axis.y * axis_dot_v * (1 - cos_theta);
+
+    v_rot.z = v.z * cos_theta +
+              axis_cross_v.z * sin_theta +
+              axis.z * axis_dot_v * (1 - cos_theta);
+
+    return v_rot;
 }
 
 // Draw functions
@@ -130,38 +169,45 @@ void drawGrid()
 void drawFloor()
 {
     int i, j;
-    int tileSize = 15;
     double half_cube_size = CUBE_SIZE / 2;
-    int numTiles = (int)(CUBE_SIZE / tileSize);
+    int tile_size_options[] = {10, 5};
+    int tile_size = 5;
+
+    for (int k = 0; k < 3; ++k)
+    {
+        if (fmod(half_cube_size, tile_size_options[k]) == 0)
+        {
+            tile_size = tile_size_options[k];
+            break;
+        }
+    }
+
+    int number_of_tiles = (int)(CUBE_SIZE / tile_size);
 
     glBegin(GL_QUADS);
-    for (i = -numTiles / 2; i < numTiles / 2; i++)
+    for (i = -number_of_tiles / 2; i < number_of_tiles / 2; i++)
     {
-        for (j = -numTiles / 2; j < numTiles / 2; j++)
+        for (j = -number_of_tiles / 2; j < number_of_tiles / 2; j++)
         {
-            // Make sure tiles stay within cube bounds
-            if (i * tileSize + tileSize > half_cube_size || i * tileSize < -half_cube_size ||
-                j * tileSize + tileSize > half_cube_size || j * tileSize < -half_cube_size)
+            if (i * tile_size + tile_size > half_cube_size || i * tile_size < -half_cube_size ||
+                j * tile_size + tile_size > half_cube_size || j * tile_size < -half_cube_size)
             {
                 continue;
             }
 
             if ((i + j) % 2 == 0)
             {
-                glColor3f(1.0, 1.0, 1.0); // White
+                glColor3f(1.0, 1.0, 1.0);
             }
             else
             {
-                glColor3f(0.0, 0.0, 0.0); // Black
+                glColor3f(0.1, 0.1, 0.1);
             }
 
-            // double floor_z_coordinate = -1 * half_cube_size;
-            double floor_z_coordinate = 0;
-
-            glVertex3f(i * tileSize, j * tileSize, floor_z_coordinate);
-            glVertex3f(i * tileSize, (j + 1) * tileSize, floor_z_coordinate);
-            glVertex3f((i + 1) * tileSize, (j + 1) * tileSize, floor_z_coordinate);
-            glVertex3f((i + 1) * tileSize, j * tileSize, floor_z_coordinate);
+            glVertex3f(i * tile_size, j * tile_size, 0);
+            glVertex3f(i * tile_size, (j + 1) * tile_size, 0);
+            glVertex3f((i + 1) * tile_size, (j + 1) * tile_size, 0);
+            glVertex3f((i + 1) * tile_size, j * tile_size, 0);
         }
     }
     glEnd();
@@ -172,42 +218,42 @@ void drawCube()
     double a = CUBE_SIZE / 2;
     glBegin(GL_QUADS);
     {
-        glColor3f(1, 0, 0);
+        glColor3f(0.5647f, 0.4353f, 0.8392f); // Purple
         // Top
         glVertex3f(a, a, a);
         glVertex3f(a, -a, a);
         glVertex3f(-a, -a, a);
         glVertex3f(-a, a, a);
 
-        // glColor3f(1, 0, 0);
-        // Bottom -> Covered by floor
+        // glColor3f(0.5647f, 0.4353f, 0.8392f); // Purple
+        // // Bottom -> Covered by floor
         // glVertex3f(a, a, 0);
         // glVertex3f(a, -a, 0);
         // glVertex3f(-a, -a, 0);
         // glVertex3f(-a, a, 0);
 
-        glColor3f(0, 1, 0);
+        glColor3f(0.0745f, 0.8f, 0.8392f); // Cyan
         // Front
         glVertex3f(a, a, a);
         glVertex3f(a, -a, a);
         glVertex3f(a, -a, 0);
         glVertex3f(a, a, 0);
 
-        glColor3f(0, 1, 0);
+        glColor3f(0.8196f, 0.7725f, 0.247f); // Yellow
         // Back
         glVertex3f(-a, a, a);
         glVertex3f(-a, -a, a);
         glVertex3f(-a, -a, 0);
         glVertex3f(-a, a, 0);
 
-        glColor3f(0, 0, 1);
+        glColor3f(0.247f, 0.8196f, 0.3216f); // Green
         // Right
         glVertex3f(a, a, a);
         glVertex3f(-a, a, a);
         glVertex3f(-a, a, 0);
         glVertex3f(a, a, 0);
 
-        glColor3f(0, 0, 1);
+        glColor3f(0.7882f, 0.3176f, 0.2784f); // Red
         // Left
         glVertex3f(a, -a, a);
         glVertex3f(-a, -a, a);
@@ -225,16 +271,13 @@ void drawBall(double radius, int slices, int stacks)
               ball_rotation_axis.y,
               ball_rotation_axis.z);
 
-    // Loop over vertical slices (longitude)
     for (int j = 0; j < slices; j++)
     {
         double lng0 = 2 * PI * (double)(j) / slices;
         double lng1 = 2 * PI * (double)(j + 1) / slices;
 
-        // Split into upper and lower hemispheres
-        // ----- UPPER HALF -----
         glBegin(GL_QUAD_STRIP);
-        for (int i = 0; i <= stacks / 2; i++) // From equator up to top
+        for (int i = 0; i <= stacks / 2; i++)
         {
             double lat = PI * (-0.5 + (double)i / stacks);
             double z = sin(lat);
@@ -245,20 +288,18 @@ void drawBall(double radius, int slices, int stacks)
             double x1 = cos(lng1);
             double y1 = sin(lng1);
 
-            // Coloring upper half
             if (j % 2 == 0)
-                glColor3f(0.9, 0.1, 0.1); // Red
+                glColor3f(0.9, 0.1, 0.1);
             else
-                glColor3f(0.1, 0.9, 0.1); // Green
+                glColor3f(0.1, 0.9, 0.1);
 
             glVertex3f(x0 * r * radius, y0 * r * radius, z * radius);
             glVertex3f(x1 * r * radius, y1 * r * radius, z * radius);
         }
         glEnd();
 
-        // ----- LOWER HALF -----
         glBegin(GL_QUAD_STRIP);
-        for (int i = stacks / 2; i <= stacks; i++) // From equator down to bottom
+        for (int i = stacks / 2; i <= stacks; i++)
         {
             double lat = PI * (-0.5 + (double)i / stacks);
             double z = sin(lat);
@@ -269,11 +310,10 @@ void drawBall(double radius, int slices, int stacks)
             double x1 = cos(lng1);
             double y1 = sin(lng1);
 
-            // Coloring lower half
             if (j % 2 == 0)
-                glColor3f(0.1, 0.9, 0.1); // Green
+                glColor3f(0.1, 0.9, 0.1);
             else
-                glColor3f(0.9, 0.1, 0.1); // Red
+                glColor3f(0.9, 0.1, 0.1);
 
             glVertex3f(x0 * r * radius, y0 * r * radius, z * radius);
             glVertex3f(x1 * r * radius, y1 * r * radius, z * radius);
@@ -286,7 +326,7 @@ void drawBall(double radius, int slices, int stacks)
 
 void drawVelocityArrow()
 {
-    if (!show_velocity_arrow || magnitude(ball_velocity) < 0.1)
+    if (!show_velocity_arrow || magnitude(ball_velocity) < MIN_VELOCITY)
     {
         return;
     }
@@ -294,10 +334,10 @@ void drawVelocityArrow()
     point normal_velocity = ball_velocity;
     normalize(&normal_velocity);
 
-    double arrowLength = BALL_RADIUS * 2 * ARROW_SCALE * magnitude(ball_velocity) / initial_speed;
+    double arrowLength = BALL_RADIUS * ARROW_SCALE;
 
-    // Draw arrow line
-    glColor3f(1.0, 1.0, 0.0); // Yellow
+    // arrow line
+    glColor3f(1.0, 1.0, 0.0);
     glLineWidth(2.0);
     glBegin(GL_LINES);
     glVertex3f(ball_position.x, ball_position.y, ball_position.z);
@@ -307,15 +347,14 @@ void drawVelocityArrow()
     glEnd();
     glLineWidth(1.0);
 
-    // Draw arrow head
+    // arrow head
     glPushMatrix();
     glTranslatef(ball_position.x + normal_velocity.x * arrowLength,
                  ball_position.y + normal_velocity.y * arrowLength,
                  ball_position.z + normal_velocity.z * arrowLength);
 
-    // Rotate to point in velocity direction
     point up = {0, 0, 1};
-    double angle = acos(normal_velocity.z) * 180.0 / PI;
+    double arrow_angle = acos(normal_velocity.z) * 180.0 / PI;
     point rotation_axix = crossProduct(up, normal_velocity);
     if (magnitude(rotation_axix) < 0.001)
     {
@@ -325,28 +364,24 @@ void drawVelocityArrow()
     }
     normalize(&rotation_axix);
 
-    glRotatef(angle, rotation_axix.x, rotation_axix.y, rotation_axix.z);
+    glRotatef(arrow_angle, rotation_axix.x, rotation_axix.y, rotation_axix.z);
 
-    // Draw the cone
     GLUquadric *quadric = gluNewQuadric();
-    gluCylinder(quadric, BALL_RADIUS * 0.3 * ARROW_SCALE, 0, BALL_RADIUS * ARROW_SCALE, 10, 1);
+    gluCylinder(quadric, BALL_RADIUS * 0.3, 0, BALL_RADIUS, 5, 1);
     gluDeleteQuadric(quadric);
 
     glPopMatrix();
 }
 
-// Reset ball with random position and velocity
 void resetBall()
 {
     int half_cube_size = CUBE_SIZE / 2;
     int quarter_cube_size = half_cube_size / 2;
 
-    // Random position within the cube
     ball_position.x = (double)(rand() % half_cube_size - quarter_cube_size);
     ball_position.y = (double)(rand() % half_cube_size - quarter_cube_size);
     ball_position.z = BALL_RADIUS;
 
-    // Random initial velocity in any direction
     double theta = (double)(rand() % 360) * PI / 180.0;
     double phi = (double)(rand() % 180) * PI / 180.0;
 
@@ -354,7 +389,6 @@ void resetBall()
     ball_velocity.y = initial_speed * sin(phi) * sin(theta);
     ball_velocity.z = initial_speed * cos(phi);
 
-    // No initial rotation/simulation
     ball_rotation_angle = 0;
     ball_rotation_axis.x = 1;
     ball_rotation_axis.y = 0;
@@ -370,20 +404,17 @@ void handleBallPhysics(double dt)
         return;
     }
 
-    // Previous position for calculating rolling
     point prev_ball_position = ball_position;
 
-    // Apply gravity
     ball_velocity.z -= GRAVITY * dt;
 
-    // Update position
     ball_position.x += ball_velocity.x * dt;
     ball_position.y += ball_velocity.y * dt;
     ball_position.z += ball_velocity.z * dt;
 
     double halfCube = CUBE_SIZE / 2;
 
-    // Check collision with walls and apply bounce
+    // Collision with walls
     if (ball_position.x - BALL_RADIUS < -halfCube)
     {
         ball_position.x = -halfCube + BALL_RADIUS;
@@ -406,12 +437,10 @@ void handleBallPhysics(double dt)
         ball_velocity.y = -ball_velocity.y * RESTITUTION;
     }
 
-    // Floor collision
+    // Collision with floor
     if (ball_position.z - BALL_RADIUS < 0)
     {
         ball_position.z = BALL_RADIUS;
-
-        // Only bounce if velocity is significant
         if (fabs(ball_velocity.z) > MIN_VELOCITY)
         {
             ball_velocity.z = -ball_velocity.z * RESTITUTION;
@@ -422,48 +451,36 @@ void handleBallPhysics(double dt)
         }
     }
 
-    // Ceiling collision
+    // Collision with ceiling
     if (ball_position.z + BALL_RADIUS > halfCube)
     {
         ball_position.z = halfCube - BALL_RADIUS;
         ball_velocity.z = -ball_velocity.z * RESTITUTION;
     }
 
-    // Calculate rolling rotation
+    // rolling rotation
     if (magnitude(ball_velocity) > 0.01)
     {
-        // Calculate displacement vector
         point displacement;
         displacement.x = ball_position.x - prev_ball_position.x;
         displacement.y = ball_position.y - prev_ball_position.y;
         displacement.z = ball_position.z - prev_ball_position.z;
 
-        // Only calculate rotation if there's actual displacement
         if (magnitude(displacement) > 0.001)
         {
-            // Calculate rotation axis (perpendicular to displacement)
-            // For a ball rolling on a surface, the rotation axis is perpendicular
-            // to both the velocity and the up vector
-            point velXY = {ball_velocity.x, ball_velocity.y, 0}; // Projected velocity on XY plane
+            point velXY = {ball_velocity.x, ball_velocity.y, 0};
             normalize(&velXY);
 
             point up = {0, 0, 1};
             ball_rotation_axis = crossProduct(velXY, up);
             normalize(&ball_rotation_axis);
 
-            // Calculate rotation angle based on arc length
             double displacement2D = sqrt(displacement.x * displacement.x + displacement.y * displacement.y);
             ball_rotation_angle += displacement2D / BALL_RADIUS;
         }
     }
 
-    // Damping - slow the ball down over time (simple air resistance)
-    double damping = 0.998;
-    ball_velocity.x *= damping;
-    ball_velocity.y *= damping;
-    ball_velocity.z *= damping;
-
-    // Stop the ball if it's moving too slowly
+    // the ball stops if it's moving too slowly while on the floor
     if (ball_position.z <= BALL_RADIUS + 0.01 && magnitude(ball_velocity) < MIN_VELOCITY)
     {
         ball_velocity.x = 0;
@@ -489,107 +506,91 @@ void drawSS()
     glPopMatrix();
 }
 
-// Function to adjust camera to always look at the cube
-void adjustCameraToLookAtCube()
-{
-    point direction;
-    direction.x = cube_center.x - camera_position.x;
-    direction.y = cube_center.y - camera_position.y;
-    direction.z = cube_center.z - camera_position.z;
-
-    look_direction_vector = direction;
-    normalize(&look_direction_vector);
-
-    // No need adjust the right and up vectors
-    // Recalculate right vector (assuming world up is (0,0,1))
-    // point world_up = {0, 0, 1};
-    // right_vector.x = direction.y * world_up.z - direction.z * world_up.y;
-    // right_vector.y = direction.z * world_up.x - direction.x * world_up.z;
-    // right_vector.z = direction.x * world_up.y - direction.y * world_up.x;
-    // normalize(&right_vector);
-
-    // // Recalculate up vector to ensure orthogonality
-    // up_vector.x = look_direction_vector.y * right_vector.z - look_direction_vector.z * right_vector.y;
-    // up_vector.y = look_direction_vector.z * right_vector.x - look_direction_vector.x * right_vector.z;
-    // up_vector.z = look_direction_vector.x * right_vector.y - look_direction_vector.y * right_vector.x;
-    // normalize(&up_vector);
-}
-
 void keyboardListener(unsigned char key, int x, int y)
 {
     double rate = 0.05;
+    double wo_ref_rate = 0.01;
+    double rotation_speed = 0.02;
+    double prev_dist = 0;
+    double current_dist = 0;
     point temp;
+    double rotation_angle = 0;
+    point direction;
 
     switch (key)
     {
     case '1': // yaw right
-        rotate_vectors(&look_direction_vector, &right_vector, (-1 * rate));
-
+        look_direction_vector = rotate_vector(look_direction_vector, up_vector, rotation_speed);
         normalize(&look_direction_vector);
+        right_vector = rotate_vector(right_vector, up_vector, rotation_speed);
         normalize(&right_vector);
-
-        up_vector = crossProduct(look_direction_vector, right_vector);
-        normalize(&up_vector);
         break;
 
     case '2': // yaw left
-        rotate_vectors(&look_direction_vector, &right_vector, rate);
-
+        look_direction_vector = rotate_vector(look_direction_vector, up_vector, -rotation_speed);
         normalize(&look_direction_vector);
+        right_vector = rotate_vector(right_vector, up_vector, -rotation_speed);
         normalize(&right_vector);
-
-        up_vector = crossProduct(look_direction_vector, right_vector);
-        normalize(&up_vector);
         break;
 
     case '3': // pitch up
-        rotate_vectors(&look_direction_vector, &up_vector, rate);
-
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, rotation_speed);
         normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, rotation_speed);
         normalize(&up_vector);
-
-        right_vector = crossProduct(up_vector, look_direction_vector);
-        normalize(&right_vector);
         break;
 
     case '4': // pitch down
-        rotate_vectors(&look_direction_vector, &up_vector, (-1 * rate));
-
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, -rotation_speed);
         normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, -rotation_speed);
         normalize(&up_vector);
+        break;
 
-        right_vector = crossProduct(up_vector, look_direction_vector);
+    case '5': // tilt clockwise
+        right_vector = rotate_vector(right_vector, look_direction_vector, rotation_speed);
+        normalize(&right_vector);
+        up_vector = rotate_vector(up_vector, look_direction_vector, rotation_speed);
+        normalize(&up_vector);
+        break;
+
+    case '6': // tilt counter-clockwise
+        right_vector = rotate_vector(right_vector, look_direction_vector, -rotation_speed);
+        normalize(&right_vector);
+        up_vector = rotate_vector(up_vector, look_direction_vector, -rotation_speed);
+        normalize(&up_vector);
+        break;
+
+    case 'w': // Move upward without changing reference point
+        prev_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        camera_position.z += (wo_ref_rate);
+        current_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        rotation_angle = acos((prev_dist * prev_dist + current_dist * current_dist - wo_ref_rate * wo_ref_rate) /
+                              (2 * prev_dist * current_dist));
+
+        rotation_angle = 180 * rotation_angle / PI;
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, -rotation_angle);
+        normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, -rotation_angle);
+        normalize(&up_vector);
+        right_vector = crossProduct(look_direction_vector, up_vector);
         normalize(&right_vector);
         break;
 
-    case '5': // roll clockwise
-        rotate_vectors(&right_vector, &up_vector, rate);
+    case 's': // Move downward without changing reference point
+        prev_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        camera_position.z -= wo_ref_rate;
+        current_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        rotation_angle = acos((prev_dist * prev_dist + current_dist * current_dist - wo_ref_rate * wo_ref_rate) /
+                              (2 * prev_dist * current_dist));
 
-        normalize(&right_vector);
-        normalize(&up_vector);
-
-        look_direction_vector = crossProduct(right_vector, up_vector);
+        rotation_angle = 180 * rotation_angle / PI;
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, rotation_angle);
         normalize(&look_direction_vector);
-        break;
-
-    case '6': // roll counter-clockwise
-        rotate_vectors(&right_vector, &up_vector, (-1 * rate));
-
-        normalize(&right_vector);
+        up_vector = rotate_vector(up_vector, right_vector, rotation_angle);
         normalize(&up_vector);
-
-        look_direction_vector = crossProduct(right_vector, up_vector);
-        normalize(&look_direction_vector);
-        break;
-
-    case 'w':
-        camera_position.z += up_vector.z * 2;
-        adjustCameraToLookAtCube();
-        break;
-
-    case 's':
-        camera_position.z -= up_vector.z * 2;
-        adjustCameraToLookAtCube();
+        right_vector = crossProduct(look_direction_vector, up_vector);
+        normalize(&right_vector);
         break;
 
     case ' ':
@@ -610,6 +611,36 @@ void keyboardListener(unsigned char key, int x, int y)
 
     case 'a':
         draw_axes = 1 - draw_axes;
+        break;
+
+    case '+':
+        if (!simulation_running)
+        {
+            initial_speed += 5.0;
+            if (initial_speed > 100.0)
+                initial_speed = 100.0;
+
+            direction = ball_velocity;
+            normalize(&direction);
+            ball_velocity.x = direction.x * initial_speed;
+            ball_velocity.y = direction.y * initial_speed;
+            ball_velocity.z = direction.z * initial_speed;
+        }
+        break;
+
+    case '-':
+        if (!simulation_running)
+        {
+            initial_speed -= 5.0;
+            if (initial_speed < 5.0)
+                initial_speed = 5.0;
+
+            direction = ball_velocity;
+            normalize(&direction);
+            ball_velocity.x = direction.x * initial_speed;
+            ball_velocity.y = direction.y * initial_speed;
+            ball_velocity.z = direction.z * initial_speed;
+        }
         break;
     }
 }
@@ -688,15 +719,14 @@ void display()
 
 void animate()
 {
-    angle += 0.05;
+    animation_angle += 0.05;
 
     static double lastTime = 0;
-    double currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0; // in seconds
+    double currentTime = glutGet(GLUT_ELAPSED_TIME) / 1000.0;
     double deltaTime = currentTime - lastTime;
 
-    // Limit physics updates to a reasonable time step
     if (deltaTime > 0.016)
-    { // Cap at 60fps (16ms)
+    {
         handleBallPhysics(deltaTime);
         lastTime = currentTime;
     }
@@ -708,9 +738,8 @@ void init()
 {
     draw_grid = 0;
     draw_axes = 0;
-    angle = 0;
+    animation_angle = 0;
 
-    // Normalize the direction vectors
     normalize(&look_direction_vector);
     normalize(&right_vector);
     normalize(&up_vector);
@@ -732,11 +761,11 @@ void init()
 int main(int argc, char **argv)
 {
     glutInit(&argc, argv);
-    glutInitWindowSize(800, 800);
+    glutInitWindowSize(700, 700);
     glutInitWindowPosition(0, 0);
     glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGB);
 
-    glutCreateWindow("Camera Controls - OpenGL");
+    glutCreateWindow("OpenGL - Camera and Ball Controls");
 
     init();
     glEnable(GL_DEPTH_TEST);

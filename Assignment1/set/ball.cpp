@@ -516,8 +516,6 @@ void keyboardListener(unsigned char key, int x, int y)
     point temp;
     double rotation_angle = 0;
     point direction;
-    point reference_point = {0, 0, 0};
-    point forward_vector;
 
     switch (key)
     {
@@ -564,29 +562,35 @@ void keyboardListener(unsigned char key, int x, int y)
         break;
 
     case 'w': // Move upward without changing reference point
-        forward_vector = {-look_direction_vector.x, -look_direction_vector.y, -look_direction_vector.z};
-        right_vector = crossProduct(up_vector, forward_vector);
-        normalize(&right_vector);
+        prev_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
         camera_position.z += (wo_ref_rate);
-        forward_vector = {forward_vector.x, forward_vector.y, forward_vector.z + wo_ref_rate};
-        normalize(&forward_vector);
-        up_vector = crossProduct(forward_vector, right_vector);
-        normalize(&up_vector);
-        look_direction_vector = crossProduct(right_vector, up_vector);
+        current_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        rotation_angle = acos((prev_dist * prev_dist + current_dist * current_dist - wo_ref_rate * wo_ref_rate) /
+                              (2 * prev_dist * current_dist));
+
+        rotation_angle = 180 * rotation_angle / PI;
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, -rotation_angle);
         normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, -rotation_angle);
+        normalize(&up_vector);
+        right_vector = crossProduct(look_direction_vector, up_vector);
+        normalize(&right_vector);
         break;
 
     case 's': // Move downward without changing reference point
-        forward_vector = {-look_direction_vector.x, -look_direction_vector.y, -look_direction_vector.z};
-        right_vector = crossProduct(forward_vector, up_vector);
-        normalize(&right_vector);
-        camera_position.z -= (wo_ref_rate);
-        forward_vector = {forward_vector.x, forward_vector.y, forward_vector.z - wo_ref_rate};
-        normalize(&forward_vector);
-        up_vector = crossProduct(right_vector, forward_vector);
-        normalize(&up_vector);
-        look_direction_vector = crossProduct(up_vector, right_vector);
+        prev_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        camera_position.z -= wo_ref_rate;
+        current_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        rotation_angle = acos((prev_dist * prev_dist + current_dist * current_dist - wo_ref_rate * wo_ref_rate) /
+                              (2 * prev_dist * current_dist));
+
+        rotation_angle = 180 * rotation_angle / PI;
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, rotation_angle);
         normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, rotation_angle);
+        normalize(&up_vector);
+        right_vector = crossProduct(look_direction_vector, up_vector);
+        normalize(&right_vector);
         break;
 
     case ' ':

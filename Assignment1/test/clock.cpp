@@ -95,6 +95,7 @@ void drawSquare(double a, float r, float g, float b)
 
 void drawHand(float angle, float length, float width, float r, float g, float b)
 {
+    // main hands
     float radians = (90.0f - angle) * PI / 180.0f;
     float x = length * cosf(radians);
     float y = length * sinf(radians);
@@ -106,6 +107,7 @@ void drawHand(float angle, float length, float width, float r, float g, float b)
     glVertex2f(centerX + x, centerY + y);
     glEnd();
 
+    // squares
     x = CLOCK_RADIUS * cosf(radians);
     y = CLOCK_RADIUS * sinf(radians);
 
@@ -117,11 +119,14 @@ void drawHand(float angle, float length, float width, float r, float g, float b)
 
 void drawClock(float hour_angle, float minute_angle, float second_angle)
 {
+    // outer rim
     glColor3f(1.0f, 1.0f, 1.0f);
     drawCircle(centerX, centerY, CLOCK_RADIUS, 100);
 
+    // markers
     drawClockMarkers();
 
+    // hands
     drawHand(hour_angle, HOUR_HAND_LENGTH, HOUR_HAND_WIDTH, 1.0f, 1.0f, 1.0f);
     drawHand(minute_angle, MINUTE_HAND_LENGTH, MINUTE_HAND_WIDTH, 1.0f, 1.0f, 1.0f);
     drawHand(second_angle, SECOND_HAND_LENGTH, SECOND_HAND_WIDTH, 1.0f, 0.0f, 0.0f);
@@ -194,7 +199,7 @@ int main(int argc, char **argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
     glutInitWindowSize(500, 500);
-    glutCreateWindow("OpenGL Analog Clock");
+    glutCreateWindow("OpenGL - Analog Clock");
 
     init();
     glutDisplayFunc(display);
