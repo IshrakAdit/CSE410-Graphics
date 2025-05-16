@@ -509,7 +509,7 @@ void drawSS()
 void keyboardListener(unsigned char key, int x, int y)
 {
     double rate = 0.05;
-    double wo_ref_rate = 0.7;
+    double wo_ref_rate = 0.01;
     double rotation_speed = 0.02;
     double prev_dist = 0;
     double current_dist = 0;
@@ -524,9 +524,6 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         right_vector = rotate_vector(right_vector, up_vector, rotation_speed);
         normalize(&right_vector);
-
-        up_vector = crossProduct(look_direction_vector, right_vector);
-        normalize(&up_vector);
         break;
 
     case '2': // yaw left
@@ -534,9 +531,6 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         right_vector = rotate_vector(right_vector, up_vector, -rotation_speed);
         normalize(&right_vector);
-
-        up_vector = crossProduct(look_direction_vector, right_vector);
-        normalize(&up_vector);
         break;
 
     case '3': // pitch up
@@ -544,9 +538,6 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         up_vector = rotate_vector(up_vector, right_vector, rotation_speed);
         normalize(&up_vector);
-
-        right_vector = crossProduct(up_vector, look_direction_vector);
-        normalize(&right_vector);
         break;
 
     case '4': // pitch down
@@ -554,9 +545,6 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&look_direction_vector);
         up_vector = rotate_vector(up_vector, right_vector, -rotation_speed);
         normalize(&up_vector);
-
-        right_vector = crossProduct(up_vector, look_direction_vector);
-        normalize(&right_vector);
         break;
 
     case '5': // tilt clockwise
@@ -564,9 +552,6 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&right_vector);
         up_vector = rotate_vector(up_vector, look_direction_vector, rotation_speed);
         normalize(&up_vector);
-
-        look_direction_vector = crossProduct(right_vector, up_vector);
-        normalize(&look_direction_vector);
         break;
 
     case '6': // tilt counter-clockwise
@@ -574,21 +559,38 @@ void keyboardListener(unsigned char key, int x, int y)
         normalize(&right_vector);
         up_vector = rotate_vector(up_vector, look_direction_vector, -rotation_speed);
         normalize(&up_vector);
-
-        look_direction_vector = crossProduct(right_vector, up_vector);
-        normalize(&look_direction_vector);
         break;
 
     case 'w': // Move upward without changing reference point
-        camera_position.x += up_vector.x * wo_ref_rate;
-        camera_position.y += up_vector.y * wo_ref_rate;
-        camera_position.z += up_vector.z * wo_ref_rate;
+        prev_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        camera_position.z += (wo_ref_rate);
+        current_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        rotation_angle = acos((prev_dist * prev_dist + current_dist * current_dist - wo_ref_rate * wo_ref_rate) /
+                              (2 * prev_dist * current_dist));
+
+        rotation_angle = 180 * rotation_angle / PI;
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, -rotation_angle);
+        normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, -rotation_angle);
+        normalize(&up_vector);
+        right_vector = crossProduct(look_direction_vector, up_vector);
+        normalize(&right_vector);
         break;
 
     case 's': // Move downward without changing reference point
-        camera_position.x -= up_vector.x * wo_ref_rate;
-        camera_position.y -= up_vector.y * wo_ref_rate;
-        camera_position.z -= up_vector.z * wo_ref_rate;
+        prev_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        camera_position.z -= wo_ref_rate;
+        current_dist = magnitude(camera_position.x, camera_position.y, camera_position.z);
+        rotation_angle = acos((prev_dist * prev_dist + current_dist * current_dist - wo_ref_rate * wo_ref_rate) /
+                              (2 * prev_dist * current_dist));
+
+        rotation_angle = 180 * rotation_angle / PI;
+        look_direction_vector = rotate_vector(look_direction_vector, right_vector, rotation_angle);
+        normalize(&look_direction_vector);
+        up_vector = rotate_vector(up_vector, right_vector, rotation_angle);
+        normalize(&up_vector);
+        right_vector = crossProduct(look_direction_vector, up_vector);
+        normalize(&right_vector);
         break;
 
     case ' ':
@@ -739,14 +741,14 @@ void init()
     animation_angle = 0;
 
     normalize(&look_direction_vector);
-    normalize(&right_vector);
+    // normalize(&right_vector);
     normalize(&up_vector);
 
     right_vector = crossProduct(up_vector, look_direction_vector);
     normalize(&right_vector);
 
-    up_vector = crossProduct(look_direction_vector, right_vector);
-    normalize(&up_vector);
+    // up_vector = crossProduct(look_direction_vector, right_vector);
+    // normalize(&up_vector);
 
     resetBall();
 
