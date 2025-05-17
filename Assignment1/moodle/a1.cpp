@@ -17,69 +17,69 @@ void drawFilledCircle(float x, float y, float radius, int segments);
 void drawTriangleFilled(float x1, float y1, float x2, float y2, float x3, float y3);
 void drawTriangleOutline(float x1, float y1, float x2, float y2, float x3, float y3);
 
-int line1 = 10;
-int line2 = 10;
-int line3 = 0;
-
-int speed1 = 1;
-int speed2 = 2;
-int speed3 = 3;
+float line = 0;
+float currentX = 0;
+vector<float> points;
+float wave_starting_point = 0.25;
+int number_of_wave_points = 6000;
+float circle_radius = 0.20;
 
 void display()
 {
     // glEnable(GL_DEPTH_TEST);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     // axes();
-    glColor3f(1, 0, 0);
-    circleOutline(0, 0, 0.5);
+    glColor3f(1, 1, 1);
+    circleOutline(0, 0, circle_radius);
     glPushMatrix();
-    glRotatef(line1, 0, 0, 1);
-    drawLine(0, 0, 0, 0.5);
-    glTranslatef(0, 0.5, 0);
-    glColor3f(0, 1, 0);
-    circleOutline(0, 0, 0.2);
-    glRotatef(line2, 0, 0, 1);
-    drawLine(0, 0, 0, 0.2);
-    glTranslatef(0, 0.2, 0);
-    glColor3f(0, 0, 1);
-    circleOutline(0, 0, 0.05);
-    glRotatef(line3, 0, 0, 1);
-    drawLine(0, 0, 0, 0.05);
+    glRotatef(line, 0, 0, 1);
+    drawLine(0, 0, circle_radius, 0);
     glPopMatrix();
+    double rad = PI * line / 180;
+    double x = circle_radius * cosf(rad);
+    double y = circle_radius * sinf(rad);
+    drawLine(x, y, wave_starting_point, y);
+    // drawFilledCircle(x, y, 0.001, 1);
+    // glTranslatef(-0.001, 0, 0);
+    points.push_back(y);
+    if (points.size() > number_of_wave_points)
+    {
+        points.erase(points.begin()); // keep it sliding
+    }
+    int n = points.size();
+    float offset = 0;
+    // printf("%d\n", n);
+    glBegin(GL_LINE_STRIP);
+    for (int i = n - 1; i >= 0; i--)
+    {
 
+        glVertex2d(wave_starting_point + offset, points[i]);
+        offset += 0.0001;
+    }
+    glEnd();
     // glFlush();
     glutSwapBuffers();
 }
 
-// void idle()
-// {
-//     // Redraw the display
-//     line1 = (speed1 + line1) % 360;
-//     line2 = (speed2 + line2) % 360;
-//     line3 = (speed3 + line3) % 360;
-//     glutPostRedisplay();
-// }
-
-void timer(int)
+void idle()
 {
-    line1 = (speed1 + line1) % 360;
-    line2 = (speed2 + line2) % 360;
-    line3 = (speed3 + line3) % 360;
 
+    line += 0.05;
+    // Redraw the display
     glutPostRedisplay();
-    glutTimerFunc(16, timer, 0); // approx 60 FPS
 }
 
 void init()
 {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
+    glClearColor(0.0f, .0f, 0.0f, 1.0f); // Set background color to black and opaque
 }
 
 int main(int argc, char **argv)
 {
     glutInit(&argc, argv);
-    glutInitWindowPosition(100, 100);
+    glutInitWindowPosition(400, 400);
     glutInitWindowSize(800, 800);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
     glutCreateWindow("OpenGL Demo");
@@ -87,8 +87,7 @@ int main(int argc, char **argv)
     init();
 
     glutDisplayFunc(display);
-    glutTimerFunc(0, timer, 0);
-    // glutIdleFunc(idle);
+    glutIdleFunc(idle);
     glutMainLoop();
 
     return 0;
@@ -124,6 +123,7 @@ void drawFilledCircle(float x, float y, float radius, int segments)
 
 void circleOutline(double x, double y, double r)
 {
+
     glPushMatrix();
     int segments = 100;
     glBegin(GL_LINE_LOOP); // Use line loop for border only
@@ -191,5 +191,3 @@ void drawTriangleOutline(float x1, float y1, float x2, float y2, float x3, float
     glVertex2f(x3, y3);
     glEnd();
 }
-
-// g++ ball.cpp -o ball.exe -lfreeglut -lglew32 -lopengl32 -lglu32

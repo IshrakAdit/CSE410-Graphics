@@ -28,6 +28,7 @@ int speed3 = 3;
 void display()
 {
     // glEnable(GL_DEPTH_TEST);
+
     glClear(GL_COLOR_BUFFER_BIT);
 
     // axes();
@@ -73,7 +74,7 @@ void timer(int)
 
 void init()
 {
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // Set background color to black and opaque
+    glClearColor(0.0f, .0f, 0.0f, 1.0f); // Set background color to black and opaque
 }
 
 int main(int argc, char **argv)
@@ -124,6 +125,7 @@ void drawFilledCircle(float x, float y, float radius, int segments)
 
 void circleOutline(double x, double y, double r)
 {
+
     glPushMatrix();
     int segments = 100;
     glBegin(GL_LINE_LOOP); // Use line loop for border only
@@ -191,5 +193,3 @@ void drawTriangleOutline(float x1, float y1, float x2, float y2, float x3, float
     glVertex2f(x3, y3);
     glEnd();
 }
-
-// g++ ball.cpp -o ball.exe -lfreeglut -lglew32 -lopengl32 -lglu32
