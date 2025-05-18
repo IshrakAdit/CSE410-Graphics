@@ -1,6 +1,9 @@
 #include <iostream>
 #include <fstream>
+#include <stack>
+
 #include "vector.cpp"
+#include "matrix.cpp"
 
 using namespace std;
 
@@ -21,9 +24,26 @@ int main(void)
     // Camera params from scene file
     scene_stream >> eye >> look >> up >> fovY >> aspectRatio >> near >> far;
 
-    cout << eye;
-    cout << look;
-    cout << up;
+    stack<Matrix> s;
+    s.push(generateIdentityMatrix(4));
+
+    string command;
+    while (true)
+    {
+        scene_stream.ignore(256, '\n');
+        scene_stream >> command;
+        cout << command << endl;
+
+        if (command == "end")
+        {
+            break;
+        }
+        // else
+        // {
+        //     cerr << "Invalid command: " << command << endl;
+        //     return -1;
+        // }
+    }
 
     // All file streams closed
     scene_stream.close();

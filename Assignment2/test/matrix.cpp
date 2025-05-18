@@ -69,14 +69,6 @@ public:
         return result;
     }
 
-    Matrix identity(int size)
-    {
-        Matrix result(size, size);
-        for (int i = 0; i < size; ++i)
-            result.data[i][i] = 1;
-        return result;
-    }
-
     Matrix transpose() const
     {
         Matrix result(col, row);
@@ -149,3 +141,11 @@ public:
         return os;
     }
 };
+
+Matrix generateIdentityMatrix(int size)
+{
+    Matrix result(size, size);
+    for (int i = 0; i < size; ++i)
+        result.data[i][i] = 1;
+    return result;
+}
