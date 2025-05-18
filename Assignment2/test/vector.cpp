@@ -1,8 +1,6 @@
 #include <iostream>
 #include <vector>
-#include <cassert>
 #include <cmath>
-#include <limits>
 #include <limits>
 
 using namespace std;
@@ -15,7 +13,7 @@ class Vector
 public:
     double x, y, z;
 
-    Vector(double x, double y, double z) : x(x), y(y), z(z) {}
+    Vector(double x = 0, double y = 0, double z = 0) : x(x), y(y), z(z) {}
 
     Vector operator+(const Vector &v) const
     {
