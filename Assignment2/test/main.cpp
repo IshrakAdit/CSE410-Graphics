@@ -1,7 +1,8 @@
 #include <fstream>
 #include <stack>
+#include <iomanip>
 
-#include "triangle.cpp"
+#include "transformations.cpp"
 
 using namespace std;
 
@@ -15,6 +16,11 @@ int main(void)
     ofstream stage2_stream("stage2.txt");
     ofstream stage3_stream("stage3.txt");
 
+    // Output precisions
+    stage1_stream << fixed << setprecision(7);
+    stage2_stream << fixed << setprecision(7);
+    stage3_stream << fixed << setprecision(7);
+
     // Input parameters
     Vector eye, look, up;
     double fovY, aspectRatio, near, far;
@@ -25,33 +31,85 @@ int main(void)
     stack<Matrix> s;
     s.push(generateIdentityMatrix(4));
 
-    stack<Triangle> triangles;
+    vector<Triangle> triangles;
 
-    string command;
+    // Translation parameters
+    double tx, ty, tz;
+    // Scale parameters
+    double sx, sy, sz;
+    // Rotation parameters
+    double angle, rx, ry, rz;
+
+    // Modelling Transformation
+    string tx_command;
     while (true)
     {
         scene_stream.ignore(256, '\n');
-        scene_stream >> command;
-        cout << command << endl;
+        scene_stream >> tx_command;
+        cout << tx_command << endl;
 
-        if (command == "triangle")
+        if (tx_command == "triangle")
         {
             Triangle triangle;
             scene_stream >> triangle;
             triangle.transform(s.top());
-            triangles.push(triangle);
+            triangles.push_back(triangle);
             stage1_stream << triangle << endl;
             stage1_stream << endl;
         }
-        else if (command == "end")
+        else if (tx_command == "translate")
+        {
+            scene_stream >> tx >> ty >> tz;
+            Matrix translation_matrix = translationMatrix(tx, ty, tz);
+            s.top() = s.top() * translation_matrix;
+        }
+        else if (tx_command == "scale")
+        {
+            scene_stream >> sx >> sy >> sz;
+            Matrix scaling_matrix = scalingMatrix(sx, sy, sz);
+            s.top() = s.top() * scaling_matrix;
+        }
+        else if (tx_command == "rotate")
+        {
+            scene_stream >> angle >> rx >> ry >> rz;
+            Matrix rotation_matrix = rotationMatrix(rx, ry, rz, angle);
+            s.top() = s.top() * rotation_matrix;
+        }
+        else if (tx_command == "push")
+        {
+            s.push(s.top());
+        }
+        else if (tx_command == "pop")
+        {
+            s.pop();
+        }
+        else if (tx_command == "end")
         {
             break;
         }
         else
         {
-            cerr << "Invalid command: " << command << endl;
+            cerr << "Invalid command: " << tx_command << endl;
             return -1;
         }
+    }
+
+    // View Transformation
+    Matrix view_matrix = viewMatrix(eye, look, up);
+    for (Triangle &triangle : triangles)
+    {
+        triangle.transform(view_matrix);
+        stage2_stream << triangle << endl;
+        stage2_stream << endl;
+    }
+
+    // Projection Transformation
+    Matrix projection_matrix = projectionMatrix(fovY, aspectRatio, near, far);
+    for (Triangle &triangle : triangles)
+    {
+        triangle.transform(projection_matrix);
+        stage3_stream << triangle << endl;
+        stage3_stream << endl;
     }
 
     // All file streams closed
