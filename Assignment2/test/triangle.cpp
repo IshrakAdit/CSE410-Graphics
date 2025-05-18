@@ -1,6 +1,3 @@
-#include <iostream>
-#include <vector>
-
 #include "vector.cpp"
 #include "matrix.cpp"
 

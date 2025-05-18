@@ -1,4 +1,3 @@
-#include <iostream>
 #include <fstream>
 #include <stack>
 
@@ -48,11 +47,11 @@ int main(void)
         {
             break;
         }
-        // else
-        // {
-        //     cerr << "Invalid command: " << command << endl;
-        //     return -1;
-        // }
+        else
+        {
+            cerr << "Invalid command: " << command << endl;
+            return -1;
+        }
     }
 
     // All file streams closed
