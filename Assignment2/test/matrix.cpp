@@ -9,11 +9,11 @@ class Matrix
 {
 public:
     int row, col;
-    vector<vector<double>> data;
+    vector<vector<double>> elements;
 
-    Matrix(int row, int col) : row(row), col(col), data(row, vector<double>(col, 0)) {}
+    Matrix(int row, int col) : row(row), col(col), elements(row, vector<double>(col, 0)) {}
 
-    Matrix(vector<vector<double>> data) : row(data.size()), col(data[0].size()), data(data) {}
+    Matrix(vector<vector<double>> elements) : row(elements.size()), col(elements[0].size()), elements(elements) {}
 
     Matrix operator+(Matrix &other) const
     {
@@ -22,7 +22,7 @@ public:
         Matrix result(row, col);
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                result.data[i][j] = data[i][j] + other.data[i][j];
+                result.elements[i][j] = elements[i][j] + other.elements[i][j];
         return result;
     }
 
@@ -33,7 +33,7 @@ public:
         Matrix result(row, col);
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                result.data[i][j] = data[i][j] - other.data[i][j];
+                result.elements[i][j] = elements[i][j] - other.elements[i][j];
         return result;
     }
 
@@ -45,7 +45,7 @@ public:
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < other.col; ++j)
                 for (int k = 0; k < col; ++k)
-                    result.data[i][j] += data[i][k] * other.data[k][j];
+                    result.elements[i][j] += elements[i][k] * other.elements[k][j];
         return result;
     }
 
@@ -54,7 +54,7 @@ public:
         Matrix result(row, col);
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                result.data[i][j] = data[i][j] * scalar;
+                result.elements[i][j] = elements[i][j] * scalar;
         return result;
     }
 
@@ -65,7 +65,7 @@ public:
         Matrix result(row, col);
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                result.data[i][j] = data[i][j] / scalar;
+                result.elements[i][j] = elements[i][j] / scalar;
         return result;
     }
 
@@ -74,7 +74,7 @@ public:
         Matrix result(col, row);
         for (int i = 0; i < row; ++i)
             for (int j = 0; j < col; ++j)
-                result.data[j][i] = data[i][j];
+                result.elements[j][i] = elements[i][j];
         return result;
     }
 
@@ -83,7 +83,7 @@ public:
         if (row != col)
             throw invalid_argument("Matrix must be square");
         if (row == 1)
-            return data[0][0];
+            return elements[0][0];
         double det = 0;
         for (int i = 0; i < col; ++i)
         {
@@ -91,8 +91,8 @@ public:
             for (int j = 1; j < row; ++j)
                 for (int k = 0, colIdx = 0; k < col; ++k)
                     if (k != i)
-                        sub.data[j - 1][colIdx++] = data[j][k];
-            det += data[0][i] * sub.determinant() * (i % 2 == 0 ? 1 : -1);
+                        sub.elements[j - 1][colIdx++] = elements[j][k];
+            det += elements[0][i] * sub.determinant() * (i % 2 == 0 ? 1 : -1);
         }
         return det;
     }
@@ -118,12 +118,12 @@ public:
                     {
                         if (c == j)
                             continue;
-                        sub.data[rr][cc++] = data[r][c];
+                        sub.elements[rr][cc++] = elements[r][c];
                     }
                     rr++;
                 }
                 double sign = ((i + j) % 2 == 0) ? 1 : -1;
-                result.data[i][j] = sign * sub.determinant() / det;
+                result.elements[i][j] = sign * sub.determinant() / det;
             }
         }
         return result.transpose();
@@ -134,7 +134,7 @@ public:
         for (int i = 0; i < matrix.row; ++i)
         {
             for (int j = 0; j < matrix.col; ++j)
-                os << matrix.data[i][j] << " ";
+                os << matrix.elements[i][j] << " ";
             if (i != matrix.row - 1)
                 os << endl;
         }
@@ -146,6 +146,6 @@ Matrix generateIdentityMatrix(int size)
 {
     Matrix result(size, size);
     for (int i = 0; i < size; ++i)
-        result.data[i][i] = 1;
+        result.elements[i][i] = 1;
     return result;
 }

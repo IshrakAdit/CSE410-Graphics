@@ -2,8 +2,7 @@
 #include <fstream>
 #include <stack>
 
-#include "vector.cpp"
-#include "matrix.cpp"
+#include "triangle.cpp"
 
 using namespace std;
 
@@ -27,6 +26,8 @@ int main(void)
     stack<Matrix> s;
     s.push(generateIdentityMatrix(4));
 
+    stack<Triangle> triangles;
+
     string command;
     while (true)
     {
@@ -34,7 +35,16 @@ int main(void)
         scene_stream >> command;
         cout << command << endl;
 
-        if (command == "end")
+        if (command == "triangle")
+        {
+            Triangle triangle;
+            scene_stream >> triangle;
+            triangle.transform(s.top());
+            triangles.push(triangle);
+            stage1_stream << triangle << endl;
+            stage1_stream << endl;
+        }
+        else if (command == "end")
         {
             break;
         }
