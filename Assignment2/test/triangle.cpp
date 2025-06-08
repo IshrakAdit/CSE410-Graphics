@@ -1,10 +1,19 @@
 #include "vector.cpp"
 #include "matrix.cpp"
+#include <algorithm>
+
+static unsigned long long int g_seed = 1;
+inline int fastrand()
+{
+    g_seed = (214013 * g_seed + 2531011);
+    return (g_seed >> 16) & 0x7FFF;
+}
 
 class Triangle
 {
 public:
     vector<Matrix> vertices;
+    unsigned char red, green, blue;
 
     Triangle()
     {
@@ -56,5 +65,21 @@ public:
                 os << endl;
         }
         return os;
+    }
+
+    void set_random_colors()
+    {
+        red = fastrand() % 256;
+        green = fastrand() % 256;
+        blue = fastrand() % 256;
+    }
+
+    void reorder_vertices()
+    {
+        sort(vertices.begin(), vertices.end(),
+             [](const Matrix &a, const Matrix &b)
+             {
+                 return a.elements[1][0] > b.elements[1][0];
+             });
     }
 };

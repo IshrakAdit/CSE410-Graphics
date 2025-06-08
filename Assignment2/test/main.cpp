@@ -3,6 +3,7 @@
 #include <iomanip>
 
 #include "transformations.cpp"
+#include "bitmap_image.cpp"
 
 using namespace std;
 
@@ -10,6 +11,7 @@ int main(void)
 {
     // Input streams
     ifstream scene_stream("scene.txt");
+    ifstream config_stream("config.txt");
 
     // Output streams
     ofstream stage1_stream("stage1.txt");
@@ -111,6 +113,33 @@ int main(void)
         stage3_stream << triangle << endl;
         stage3_stream << endl;
     }
+
+    double screen_width, screen_height;
+    config_stream >> screen_width >> screen_height;
+
+    for (Triangle &triangle : triangles)
+        triangle.set_random_colors();
+
+    // Depth range
+    double z_min = -1.0, z_max = 1.0;
+
+    // Horizontal and Vertical limits of the view space
+    double left_limit = -1.0, right_limit = 1.0;
+    double bottom_limit = -1.0, top_limit = 1.0;
+
+    // Size of a pixel in normalized coordinates
+    double pixel_width = (right_limit - left_limit) / screen_width;
+    double pixel_height = (top_limit - bottom_limit) / screen_height;
+
+    // Center coordinates of edge pixels
+    double topmost_center_y = top_limit - pixel_height / 2.0;
+    double bottommost_center_y = bottom_limit + pixel_height / 2.0;
+    double leftmost_center_x = left_limit + pixel_width / 2.0;
+    double rightmost_center_x = right_limit - pixel_width / 2.0;
+
+    vector<vector<double>> z_buffer(screen_height, std::vector<double>(screen_width, z_max));
+    bitmap_image image(screen_width, screen_height);
+    image.set_all_channels(0, 0, 0);
 
     // All file streams closed
     scene_stream.close();
