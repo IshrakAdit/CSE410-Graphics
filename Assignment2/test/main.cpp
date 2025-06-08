@@ -141,6 +141,22 @@ int main(void)
     bitmap_image image(screen_width, screen_height);
     image.set_all_channels(0, 0, 0);
 
+    for (int tr = 0; tr < triangles.size(); tr++)
+    {
+        Triangle triangle = triangles[tr];
+        triangle.reorder_vertices();
+
+        // Trianle vertices -> A, B, C
+        Vector A = Vector(triangle.vertices[0].elements[0][0], triangle.vertices[0].elements[1][0], triangle.vertices[0].elements[2][0]);
+        Vector B = Vector(triangle.vertices[1].elements[0][0], triangle.vertices[1].elements[1][0], triangle.vertices[1].elements[2][0]);
+        Vector C = Vector(triangle.vertices[2].elements[0][0], triangle.vertices[2].elements[1][0], triangle.vertices[2].elements[2][0]);
+
+        // Projection of triangle edges on xy plane ( z = 0 )
+        // Line l1 = Line(Point(a.x, a.y, 0), Point(b.x, b.y, 0));
+        // Line l2 = Line(Point(a.x, a.y, 0), Point(c.x, c.y, 0));
+        // Line l3 = Line(Point(b.x, b.y, 0), Point(c.x, c.y, 0));
+    }
+
     // All file streams closed
     scene_stream.close();
     stage1_stream.close();
