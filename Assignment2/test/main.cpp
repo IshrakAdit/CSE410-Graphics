@@ -137,7 +137,7 @@ int main(void)
     double leftmost_center_x = left_limit + pixel_width / 2.0;
     double rightmost_center_x = right_limit - pixel_width / 2.0;
 
-    vector<vector<double>> z_buffer(screen_height, std::vector<double>(screen_width, z_max));
+    vector<vector<double>> z_buffer(screen_height, vector<double>(screen_width, z_max));
     bitmap_image image(screen_width, screen_height);
     image.set_all_channels(0, 0, 0);
 
@@ -152,14 +152,33 @@ int main(void)
         Vector C = Vector(triangle.vertices[2].elements[0][0], triangle.vertices[2].elements[1][0], triangle.vertices[2].elements[2][0]);
 
         // Projection of triangle edges on xy plane ( z = 0 )
-        // Line l1 = Line(Point(a.x, a.y, 0), Point(b.x, b.y, 0));
-        // Line l2 = Line(Point(a.x, a.y, 0), Point(c.x, c.y, 0));
-        // Line l3 = Line(Point(b.x, b.y, 0), Point(c.x, c.y, 0));
-    }
+        Line projection_of_AB = Line(Point(A.x, A.y, 0), Point(B.x, B.y, 0));
+        Line projection_of_BC = Line(Point(B.x, B.y, 0), Point(C.x, C.y, 0));
+        Line projection_of_AC = Line(Point(A.x, A.y, 0), Point(C.x, C.y, 0));
 
-    // All file streams closed
-    scene_stream.close();
-    stage1_stream.close();
-    stage2_stream.close();
-    stage3_stream.close();
-}
+        double bottom_scanline = max(C.y, bottommost_center_y);
+        double top_scanline = min(A.y, topmost_center_y);
+
+        int top_row = round((top_scanline - bottommost_center_y) / pixel_height);
+        int bottom_row = round((bottom_scanline - bottommost_center_y) / pixel_height);
+
+        for (int i = top_row; i >= bottom_row; i--)
+        {
+            double y_s = bottommost_center_y + i * pixel_height;
+
+            Line current_line = Line(Point(0, y_s, 0), Point(1, y_s, 0));
+
+            pair<bool, Point> l1_intersection =
+                check_line_segment_intersection(current_line, projection_of_AB);
+            pair<bool, Point> l2_intersection =
+                check_line_segment_intersection(current_line, projection_of_AC);
+            pair<bool, Point> l3_intersection =
+                check_line_segment_intersection(current_line, projection_of_BC);
+        }
+
+        // All file streams closed
+        scene_stream.close();
+        stage1_stream.close();
+        stage2_stream.close();
+        stage3_stream.close();
+    }
