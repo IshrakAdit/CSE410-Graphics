@@ -1,7 +1,3 @@
-#include <iostream>
-#include <cmath>
-#include <limits>
-#include <tuple>
 #include "vector.cpp"
 
 using namespace std;
@@ -38,7 +34,7 @@ public:
         p1 = Point(p0.x + dir.x, p0.y + dir.y, p0.z + dir.z);
     }
 
-    pair<bool, Point> Line::get_intersection_point(const Line &l) const
+    pair<bool, Point> get_intersection_point(const Line &l) const
     {
         Vector vec = direction.cross(l.direction);
 
@@ -68,24 +64,9 @@ public:
         Line other = Line(p, v);
         pair<bool, Point> intersection_point = get_intersection_point(other);
         if (intersection_point.first)
-        {
-            return intersection_point.second.distance(p);
-        }
-        else
-        {
-            // now the lines are parallel
-            return get_distance_from_point(p);
-        }
-    }
-
-    double get_distance_from_point_along_vector(const Point &p, const Vector &v) const
-    {
-        Line other = Line(p, v);
-        std::pair<bool, Point> intersection_point = get_intersection_point(other);
-        if (intersection_point.first)
             return intersection_point.second.distance(p);
         else
-            return get_distance_from_point(p);
+            return get_distance_from_point(p); // now the lines are parallel
     }
 
     double get_distance_from_line(const Line &l) const

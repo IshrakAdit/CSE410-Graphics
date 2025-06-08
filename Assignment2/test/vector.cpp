@@ -2,6 +2,9 @@
 #include <vector>
 #include <cmath>
 #include <limits>
+#include <cmath>
+#include <tuple>
+#include <algorithm>
 
 using namespace std;
 

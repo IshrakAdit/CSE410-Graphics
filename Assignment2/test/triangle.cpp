@@ -1,6 +1,5 @@
-#include "vector.cpp"
+#include "line.cpp"
 #include "matrix.cpp"
-#include <algorithm>
 
 static unsigned long long int g_seed = 1;
 inline int fastrand()
