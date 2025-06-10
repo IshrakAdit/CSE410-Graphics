@@ -118,15 +118,26 @@ int main(void)
     double screen_width, screen_height;
     config_stream >> screen_width >> screen_height;
 
+    double left_limit, right_limit;
+    config_stream >> left_limit;
+    right_limit = (-1) * left_limit;
+
+    double bottom_limit, top_limit;
+    config_stream >> bottom_limit;
+    top_limit = (-1) * bottom_limit;
+
+    double z_min, z_max;
+    config_stream >> z_min >> z_max;
+
     for (Triangle &triangle : triangles)
         triangle.set_random_colors();
 
     // Depth range
-    double z_min = -1.0, z_max = 1.0;
+    // double z_min = -1.0, z_max = 1.0;
 
     // Horizontal and Vertical limits of the view space
-    double left_limit = -1.0, right_limit = 1.0;
-    double bottom_limit = -1.0, top_limit = 1.0;
+    // double left_limit = -1.0, right_limit = 1.0;
+    // double bottom_limit = -1.0, top_limit = 1.0;
 
     // Size of a pixel in normalized coordinates
     double pixel_width = (right_limit - left_limit) / screen_width;
