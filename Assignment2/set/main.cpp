@@ -23,6 +23,7 @@ int main(void)
     stage1_stream << fixed << setprecision(7);
     stage2_stream << fixed << setprecision(7);
     stage3_stream << fixed << setprecision(7);
+    stage4_stream << fixed << setprecision(6);
 
     // Input parameters
     Vector eye, look, up;
@@ -117,6 +118,7 @@ int main(void)
 
     // Clippinng & Rasterization
 
+    // Read & Extract Data
     double screen_width, screen_height;
     config_stream >> screen_width >> screen_height;
 
@@ -147,10 +149,12 @@ int main(void)
     double leftmost_center_x = left_limit + pixel_width / 2.0;
     double rightmost_center_x = right_limit - pixel_width / 2.0;
 
+    // Initialize Z-buffer and Frame buffer
     vector<vector<double>> z_buffer(screen_height, vector<double>(screen_width, z_max));
     bitmap_image image(screen_width, screen_height);
     image.set_all_channels(0, 0, 0);
 
+    // Apply procedure
     for (int tr = 0; tr < triangles.size(); tr++)
     {
         Triangle triangle = triangles[tr];
@@ -248,6 +252,7 @@ int main(void)
         }
     }
 
+    // Save image and z_buffer
     image.save_image("out.bmp");
 
     for (int i = 0; i < screen_height; i++)
@@ -261,8 +266,14 @@ int main(void)
         stage4_stream << endl;
     }
 
-    image.clear();
+    // Free all memory
+    triangles.clear();
+
+    for (auto &row : z_buffer)
+        row.clear();
     z_buffer.clear();
+
+    image.clear();
 
     // All file streams closed
     scene_stream.close();
