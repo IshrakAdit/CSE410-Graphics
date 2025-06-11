@@ -9,13 +9,13 @@ public:
 
     Point(double x = 0, double y = 0, double z = 0) : x(x), y(y), z(z) {}
 
-    double distance(const Point &p) { return sqrt(pow(x - p.x, 2) + pow(y - p.y, 2) + pow(z - p.z, 2)); }
+    // double distance(const Point &p) { return sqrt(pow(x - p.x, 2) + pow(y - p.y, 2) + pow(z - p.z, 2)); }
 
-    friend ostream &operator<<(ostream &os, const Point &p)
-    {
-        os << "(" << p.x << ", " << p.y << ", " << p.z << ")";
-        return os;
-    }
+    // friend ostream &operator<<(ostream &os, const Point &p)
+    // {
+    //     os << "(" << p.x << ", " << p.y << ", " << p.z << ")";
+    //     return os;
+    // }
 };
 
 class Line
@@ -29,10 +29,10 @@ public:
         direction = Vector(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z);
     }
 
-    Line(Point p0, Vector dir) : p0(p0), direction(dir)
-    {
-        p1 = Point(p0.x + dir.x, p0.y + dir.y, p0.z + dir.z);
-    }
+    // Line(Point p0, Vector dir) : p0(p0), direction(dir)
+    // {
+    //     p1 = Point(p0.x + dir.x, p0.y + dir.y, p0.z + dir.z);
+    // }
 
     pair<bool, Point> get_intersection_point(const Line &l) const
     {
