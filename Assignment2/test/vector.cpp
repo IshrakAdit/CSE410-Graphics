@@ -33,12 +33,12 @@ public:
         return Vector(x * d, y * d, z * d);
     }
 
-    Vector operator/(const double &d) const
-    {
-        if (fabs(d) <= numeric_limits<double>::epsilon())
-            throw invalid_argument("Division by zero");
-        return Vector(x / d, y / d, z / d);
-    }
+    // Vector operator/(const double &d) const
+    // {
+    //     if (fabs(d) <= numeric_limits<double>::epsilon())
+    //         throw invalid_argument("Division by zero");
+    //     return Vector(x / d, y / d, z / d);
+    // }
 
     double dot(const Vector &v) const
     {
@@ -69,18 +69,18 @@ public:
         return v1 + v2 + v3;
     }
 
-    bool check_normalized() const
-    {
-        double length = sqrt(x * x + y * y + z * z);
-        return fabs(length - 1) <= numeric_limits<double>::epsilon();
-    }
+    // bool check_normalized() const
+    // {
+    //     double length = sqrt(x * x + y * y + z * z);
+    //     return fabs(length - 1) <= numeric_limits<double>::epsilon();
+    // }
 
-    bool check_orthogonal(const Vector &v) const
-    {
-        return fabs(this->dot(v)) <= numeric_limits<double>::epsilon();
-    }
+    // bool check_orthogonal(const Vector &v) const
+    // {
+    //     return fabs(this->dot(v)) <= numeric_limits<double>::epsilon();
+    // }
 
-    double norm() const { return sqrt(x * x + y * y + z * z); }
+    // double norm() const { return sqrt(x * x + y * y + z * z); }
 
     friend istream &operator>>(istream &is, Vector &v)
     {
@@ -88,10 +88,10 @@ public:
         return is;
     }
 
-    friend ostream &operator<<(ostream &os, const Vector &v)
-    {
-        // os << v.x << " " << v.y << " " << v.z;
-        os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
-        return os;
-    }
+    // friend ostream &operator<<(ostream &os, const Vector &v)
+    // {
+    //     // os << v.x << " " << v.y << " " << v.z;
+    //     os << "(" << v.x << ", " << v.y << ", " << v.z << ")";
+    //     return os;
+    // }
 };

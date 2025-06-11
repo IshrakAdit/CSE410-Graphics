@@ -52,33 +52,33 @@ public:
         return make_pair(true, p);
     }
 
-    double get_distance_from_point(const Point &p) const
-    {
-        Vector b = Vector(p.x - p0.x, p.y - p0.y, p.z - p0.z);
-        Vector c = direction.cross(b);
-        return c.norm() / direction.norm();
-    }
+    // double get_distance_from_point(const Point &p) const
+    // {
+    //     Vector b = Vector(p.x - p0.x, p.y - p0.y, p.z - p0.z);
+    //     Vector c = direction.cross(b);
+    //     return c.norm() / direction.norm();
+    // }
 
-    double get_distance_from_point_along_vector(const Point &p, const Vector &v) const
-    {
-        Line other = Line(p, v);
-        pair<bool, Point> intersection_point = get_intersection_point(other);
-        if (intersection_point.first)
-            return intersection_point.second.distance(p);
-        else
-            return get_distance_from_point(p); // now the lines are parallel
-    }
+    // double get_distance_from_point_along_vector(const Point &p, const Vector &v) const
+    // {
+    //     Line other = Line(p, v);
+    //     pair<bool, Point> intersection_point = get_intersection_point(other);
+    //     if (intersection_point.first)
+    //         return intersection_point.second.distance(p);
+    //     else
+    //         return get_distance_from_point(p); // now the lines are parallel
+    // }
 
-    double get_distance_from_line(const Line &l) const
-    {
-        Vector cross = direction.cross(l.direction).normalize();
-        Vector b = Vector(p0.x - l.p0.x, p0.y - l.p0.y, p0.z - l.p0.z);
-        return fabs(b.dot(cross));
-    }
+    // double get_distance_from_line(const Line &l) const
+    // {
+    //     Vector cross = direction.cross(l.direction).normalize();
+    //     Vector b = Vector(p0.x - l.p0.x, p0.y - l.p0.y, p0.z - l.p0.z);
+    //     return fabs(b.dot(cross));
+    // }
 
-    friend ostream &operator<<(std::ostream &os, const Line &l)
-    {
-        os << l.p0 << " -> " << l.p1;
-        return os;
-    }
+    // friend ostream &operator<<(std::ostream &os, const Line &l)
+    // {
+    //     os << l.p0 << " -> " << l.p1;
+    //     return os;
+    // }
 };
