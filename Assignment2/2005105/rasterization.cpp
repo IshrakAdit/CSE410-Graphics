@@ -120,54 +120,53 @@ void rasterization(vector<Triangle> &triangles)
                 else if (order == "BAC")
                 {
                     tie(A, B, C) = make_tuple(B, A, C);
-                    tie(projection_of_AB, projection_of_AC, projection_of_BC) =
-                        make_tuple(projection_of_AB, projection_of_BC, projection_of_AC);
-                    tie(AB_line_intersection, AC_line_intersection, BC_line_intersection) =
-                        make_tuple(AB_line_intersection, BC_line_intersection, AC_line_intersection);
+                    tie(projection_of_AB, projection_of_AC, projection_of_BC) = make_tuple(projection_of_AB, projection_of_BC, projection_of_AC);
+                    tie(AB_line_intersection, AC_line_intersection, BC_line_intersection) = make_tuple(AB_line_intersection, BC_line_intersection, AC_line_intersection);
                 }
                 else if (order == "CAB")
                 {
                     tie(A, B, C) = make_tuple(C, A, B);
-                    tie(projection_of_AB, projection_of_AC, projection_of_BC) =
-                        make_tuple(projection_of_AC, projection_of_BC, projection_of_AB);
-                    tie(AB_line_intersection, AC_line_intersection, BC_line_intersection) =
-                        make_tuple(AC_line_intersection, BC_line_intersection, AB_line_intersection);
+                    tie(projection_of_AB, projection_of_AC, projection_of_BC) = make_tuple(projection_of_AC, projection_of_BC, projection_of_AB);
+                    tie(AB_line_intersection, AC_line_intersection, BC_line_intersection) = make_tuple(AC_line_intersection, BC_line_intersection, AB_line_intersection);
                 }
             };
 
             if (intersection_count == 0)
                 continue;
             if (intersection_count == 2)
-            {
-                reorder_points_and_lines(AB_line_intersection.first
-                                             ? (AC_line_intersection.first ? "ABC" : "BAC")
-                                             : "CAB");
-            }
+                reorder_points_and_lines(AB_line_intersection.first ? (AC_line_intersection.first ? "ABC" : "BAC") : "CAB");
 
+            // Intersection x-cordination
             double x_a = AB_line_intersection.second.x;
             double x_b = AC_line_intersection.second.x;
+
+            // Interpolation of z-values
             double z_a = A.z - (A.z - B.z) * (A.y - current_y) / (A.y - B.y);
             double z_b = A.z - (A.z - C.z) * (A.y - current_y) / (A.y - C.y);
 
+            // Proper ordering
             if (x_a > x_b)
             {
                 swap(x_a, x_b);
                 swap(z_a, z_b);
             }
 
-            int left_col = round((max(x_a, leftmost_center_x) - leftmost_center_x) / pixel_width);
-            int right_col = round((min(x_b, rightmost_center_x) - leftmost_center_x) / pixel_width);
+            // Column range
+            int left_column = round((max(x_a, leftmost_center_x) - leftmost_center_x) / pixel_width);
+            int right_column = round((min(x_b, rightmost_center_x) - leftmost_center_x) / pixel_width);
 
-            for (int j = left_col; j <= right_col; j++)
+            // Scanline filling
+            for (int j = left_column; j <= right_column; j++)
             {
-                double x_p = leftmost_center_x + j * pixel_width;
-                double z_p = z_b - (z_b - z_a) * (x_b - x_p) / (x_b - x_a);
+                // x-cordinate and z-value of current pixel
+                double pixel_x = leftmost_center_x + j * pixel_width;
+                double pixel_z = z_b - (z_b - z_a) * (x_b - pixel_x) / (x_b - x_a);
 
-                if (z_p >= z_min && z_p < z_buffer[screen_height - 1 - i][j])
+                // z-value range and improvement check
+                if (pixel_z >= z_min && pixel_z < z_buffer[screen_height - 1 - i][j])
                 {
-                    z_buffer[screen_height - 1 - i][j] = z_p;
-                    image.set_pixel(j, screen_height - 1 - i, triangle.red,
-                                    triangle.green, triangle.blue);
+                    z_buffer[screen_height - 1 - i][j] = pixel_z;
+                    image.set_pixel(j, screen_height - 1 - i, triangle.red, triangle.green, triangle.blue);
                 }
             }
         }
@@ -197,4 +196,6 @@ void rasterization(vector<Triangle> &triangles)
     // All file streams closed
     config_stream.close();
     z_buffer_stream.close();
+
+    return;
 }

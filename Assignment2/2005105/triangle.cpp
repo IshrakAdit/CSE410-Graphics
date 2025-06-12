@@ -1,6 +1,6 @@
 #include "data_structures.cpp"
 
-static unsigned long long int g_seed = 1;
+static unsigned long long int g_seed = 17;
 inline int fastrand()
 {
     g_seed = (214013 * g_seed + 2531011);
