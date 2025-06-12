@@ -47,25 +47,26 @@ public:
     {
         double length = sqrt(x * x + y * y + z * z);
         if (fabs(length) <= numeric_limits<double>::epsilon())
-            throw invalid_argument("vector magnitude is 0, which is incompatible for normalization");
+            throw invalid_argument("Vector magnitude is zero, which is incompatible for normalization");
         return Vector(x / length, y / length, z / length);
     }
 
     Vector rotate(const Vector &axis, double angle) const
     {
-        // Rodrigues' Rotation Formula
         double theta = angle * PI / 180;
         Vector k = axis.normalize();
+
         Vector v1 = *this * cos(theta);
         Vector v2 = k.cross(*this) * sin(theta);
         Vector v3 = k * k.dot(*this) * (1 - cos(theta));
+
         return v1 + v2 + v3;
     }
 
-    friend istream &operator>>(istream &is, Vector &v)
+    friend istream &operator>>(istream &input_stream, Vector &v)
     {
-        is >> v.x >> v.y >> v.z;
-        return is;
+        input_stream >> v.x >> v.y >> v.z;
+        return input_stream;
     }
 };
 
@@ -87,21 +88,20 @@ public:
         direction = Vector(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z);
     }
 
-    pair<bool, Point> get_intersection_point(const Line &l) const
+    pair<bool, Point> get_intersection_point(const Line &line) const
     {
-        Vector vec = direction.cross(l.direction);
+        Vector perp_vector = direction.cross(line.direction);
 
-        double res = vec.dot(vec);
-        if (fabs(res) <= numeric_limits<double>::epsilon())
-        {
+        double perp_vector_square = perp_vector.dot(perp_vector);
+        // Parallel / Coincident
+        if (fabs(perp_vector_square) <= numeric_limits<double>::epsilon())
             return make_pair(false, Point());
-        }
 
-        Vector w = Vector(l.p0.x - p0.x, l.p0.y - p0.y, l.p0.z - p0.z);
-        Vector u = w.cross(l.direction);
-        double t = u.dot(vec) / res;
+        Vector w = Vector(line.p0.x - p0.x, line.p0.y - p0.y, line.p0.z - p0.z);
+        Vector u = w.cross(line.direction);
 
-        Point p = Point(p0.x + t * direction.x, p0.y + t * direction.y, p0.z + t * direction.z);
+        double scalar_parameter = u.dot(perp_vector) / perp_vector_square;
+        Point p = Point(p0.x + scalar_parameter * direction.x, p0.y + scalar_parameter * direction.y, p0.z + scalar_parameter * direction.z);
         return make_pair(true, p);
     }
 };

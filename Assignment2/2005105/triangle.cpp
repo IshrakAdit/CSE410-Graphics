@@ -24,8 +24,8 @@ public:
     {
         for (Matrix &v : vertices)
         {
-            v = m * v;
-            v = v / v.elements[3][0];
+            v = m * v;                // Transformation
+            v = v / v.elements[3][0]; // Normalization
         }
     }
 
@@ -41,29 +41,30 @@ public:
         sort(vertices.begin(), vertices.end(),
              [](const Matrix &a, const Matrix &b)
              {
+                 // Ordered by y-cordinates
                  return a.elements[1][0] > b.elements[1][0];
              });
     }
 
-    friend istream &operator>>(istream &is, Triangle &t)
+    friend istream &operator>>(istream &input_stream, Triangle &triangle)
     {
-        for (Matrix &v : t.vertices)
+        for (Matrix &v : triangle.vertices)
         {
-            is >> v.elements[0][0] >> v.elements[1][0] >> v.elements[2][0];
+            input_stream >> v.elements[0][0] >> v.elements[1][0] >> v.elements[2][0];
             v.elements[3][0] = 1;
         }
-        return is;
+        return input_stream;
     }
 
-    friend ostream &operator<<(ostream &os, const Triangle &t)
+    friend ostream &operator<<(ostream &output_stream, const Triangle &triangle)
     {
         for (int i = 0; i < 3; i++)
         {
-            os << t.vertices[i].elements[0][0] << " " << t.vertices[i].elements[1][0] << " "
-               << t.vertices[i].elements[2][0];
+            output_stream << triangle.vertices[i].elements[0][0] << " " << triangle.vertices[i].elements[1][0] << " "
+                          << triangle.vertices[i].elements[2][0];
             if (i != 2)
-                os << endl;
+                output_stream << endl;
         }
-        return os;
+        return output_stream;
     }
 };

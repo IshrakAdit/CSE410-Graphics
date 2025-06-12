@@ -36,12 +36,12 @@ Matrix rotationMatrix(double x, double y, double z, double angle)
     bases[1] = Vector(0, 1, 0);
     bases[2] = Vector(0, 0, 1);
 
-    Vector v;
-    Vector v_rotated;
+    Vector v, v_rotated;
     for (int i = 0; i < 3; i++)
     {
         v = bases[i];
         v_rotated = v.rotate(axis, angle);
+
         result.elements[0][i] = v_rotated.x;
         result.elements[1][i] = v_rotated.y;
         result.elements[2][i] = v_rotated.z;
@@ -92,24 +92,4 @@ Matrix projectionMatrix(double fov_y, double aspect_ratio, double near, double f
     projection.elements[3][2] = -1;
 
     return projection;
-}
-
-bool is_equal(double a, double b)
-{
-    return fabs(a - b) <= numeric_limits<double>::epsilon();
-}
-
-pair<bool, Point> check_line_segment_intersection(const Line &line,
-                                                  Line segment)
-{
-    pair<bool, Point> intersection_point = line.get_intersection_point(segment);
-    if (!intersection_point.first)
-        return intersection_point;
-    if (segment.p0.x > segment.p1.x)
-        swap(segment.p0, segment.p1);
-    if (is_equal(segment.p0.x, segment.p1.x))
-        intersection_point.first = intersection_point.second.y >= min(segment.p0.y, segment.p1.y) && intersection_point.second.y <= max(segment.p0.y, segment.p1.y);
-    else
-        intersection_point.first = intersection_point.second.x >= segment.p0.x && intersection_point.second.x <= segment.p1.x;
-    return intersection_point;
 }

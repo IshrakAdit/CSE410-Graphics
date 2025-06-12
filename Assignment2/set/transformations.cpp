@@ -36,12 +36,12 @@ Matrix rotationMatrix(double x, double y, double z, double angle)
     bases[1] = Vector(0, 1, 0);
     bases[2] = Vector(0, 0, 1);
 
-    Vector v;
-    Vector v_rotated;
+    Vector v, v_rotated;
     for (int i = 0; i < 3; i++)
     {
         v = bases[i];
         v_rotated = v.rotate(axis, angle);
+
         result.elements[0][i] = v_rotated.x;
         result.elements[1][i] = v_rotated.y;
         result.elements[2][i] = v_rotated.z;
