@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "transformations.cpp"
-#include "bitmap_image.cpp"
+#include "bitmap_image.hpp"
 
 using namespace std;
 
