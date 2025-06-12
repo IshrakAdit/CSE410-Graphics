@@ -24,11 +24,11 @@ Matrix scalingMatrix(double x, double y, double z)
     return result;
 }
 
-Matrix rotationMatrix(double x, double y, double z, double angle)
+Matrix rotationMatrix(double ax, double ay, double az, double angle)
 {
     Matrix result = generateIdentityMatrix(4);
 
-    Vector axis = Vector(x, y, z);
+    Vector axis = Vector(ax, ay, az);
     axis = axis.normalize();
 
     vector<Vector> bases(3);
@@ -64,12 +64,18 @@ Matrix viewMatrix(Vector eye, Vector look, Vector up)
     Matrix view = translationMatrix(-eye.x, -eye.y, -eye.z);
 
     Matrix rotation(4, 4);
-    rotation.elements[0][0] = right_vector.x, rotation.elements[0][1] = right_vector.y,
+    rotation.elements[0][0] = right_vector.x,
+    rotation.elements[0][1] = right_vector.y,
     rotation.elements[0][2] = right_vector.z;
-    rotation.elements[1][0] = up_vector.x, rotation.elements[1][1] = up_vector.y,
+
+    rotation.elements[1][0] = up_vector.x,
+    rotation.elements[1][1] = up_vector.y,
     rotation.elements[1][2] = up_vector.z;
-    rotation.elements[2][0] = -look_direction_vector.x, rotation.elements[2][1] = -look_direction_vector.y,
+
+    rotation.elements[2][0] = -look_direction_vector.x,
+    rotation.elements[2][1] = -look_direction_vector.y,
     rotation.elements[2][2] = -look_direction_vector.z;
+
     rotation.elements[3][3] = 1;
 
     view = rotation * view;
