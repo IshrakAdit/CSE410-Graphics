@@ -6,6 +6,31 @@
 
 using namespace std;
 
+bool is_equal(double a, double b)
+{
+    return fabs(a - b) <= numeric_limits<double>::epsilon();
+}
+
+pair<bool, Point> check_line_segment_intersection(const Line &line,
+                                                  Line segment)
+{
+    pair<bool, Point> intersection_point = line.get_intersection_point(segment);
+
+    // No intersection
+    if (!intersection_point.first)
+        return intersection_point;
+
+    // Checking if the line segment is vertical
+    if (is_equal(segment.p0.x, segment.p1.x))
+        // If yes, comparing if intersection point is bound by y-coordinates of line segment
+        intersection_point.first = intersection_point.second.y >= min(segment.p0.y, segment.p1.y) && intersection_point.second.y <= max(segment.p0.y, segment.p1.y);
+    else
+        // Otherwise, comparing if intersection point is bound by y-coordinates of line segment
+        intersection_point.first = intersection_point.second.x >= min(segment.p0.x, segment.p1.x) && intersection_point.second.x <= max(segment.p0.x, segment.p1.x);
+
+    return intersection_point;
+}
+
 void rasterization(vector<Triangle> &triangles)
 {
 
@@ -13,10 +38,10 @@ void rasterization(vector<Triangle> &triangles)
     ifstream config_stream("config.txt");
 
     // Output streams
-    ofstream stage4_stream("z_buffer.txt");
-    stage4_stream << fixed << setprecision(6);
+    ofstream z_buffer_stream("z_buffer.txt");
+    z_buffer_stream << fixed << setprecision(6);
 
-    // Read & Extract Data
+    // Sub-task-1: Read & Extract Data
     double screen_width, screen_height;
     config_stream >> screen_width >> screen_height;
 
@@ -47,12 +72,12 @@ void rasterization(vector<Triangle> &triangles)
     double leftmost_center_x = left_limit + pixel_width / 2.0;
     double rightmost_center_x = right_limit - pixel_width / 2.0;
 
-    // Initialize Z-buffer and Frame buffer
+    // Sub-task-2: Initialize Z-buffer and Frame buffer
     vector<vector<double>> z_buffer(screen_height, vector<double>(screen_width, z_max));
     bitmap_image image(screen_width, screen_height);
     image.set_all_channels(0, 0, 0);
 
-    // Apply procedure
+    // Sub-task-3: Apply procedure
     for (int tr = 0; tr < triangles.size(); tr++)
     {
         Triangle triangle = triangles[tr];
@@ -150,7 +175,7 @@ void rasterization(vector<Triangle> &triangles)
         }
     }
 
-    // Save image and z_buffer
+    // Sub-task-4: Save image and z_buffer
     image.save_image("out.bmp");
 
     for (int i = 0; i < screen_height; i++)
@@ -159,12 +184,12 @@ void rasterization(vector<Triangle> &triangles)
         {
             if (z_buffer[i][j] >= z_max)
                 continue;
-            stage4_stream << z_buffer[i][j] << "\t";
+            z_buffer_stream << z_buffer[i][j] << "\t";
         }
-        stage4_stream << endl;
+        z_buffer_stream << endl;
     }
 
-    // Free all memory
+    // Sub-task-5: Free all memory
     for (auto &row : z_buffer)
         row.clear();
     z_buffer.clear();
@@ -173,5 +198,5 @@ void rasterization(vector<Triangle> &triangles)
 
     // All file streams closed
     config_stream.close();
-    stage4_stream.close();
+    z_buffer_stream.close();
 }

@@ -93,23 +93,3 @@ Matrix projectionMatrix(double fov_y, double aspect_ratio, double near, double f
 
     return projection;
 }
-
-bool is_equal(double a, double b)
-{
-    return fabs(a - b) <= numeric_limits<double>::epsilon();
-}
-
-pair<bool, Point> check_line_segment_intersection(const Line &line,
-                                                  Line segment)
-{
-    pair<bool, Point> intersection_point = line.get_intersection_point(segment);
-    if (!intersection_point.first)
-        return intersection_point;
-    if (segment.p0.x > segment.p1.x)
-        swap(segment.p0, segment.p1);
-    if (is_equal(segment.p0.x, segment.p1.x))
-        intersection_point.first = intersection_point.second.y >= min(segment.p0.y, segment.p1.y) && intersection_point.second.y <= max(segment.p0.y, segment.p1.y);
-    else
-        intersection_point.first = intersection_point.second.x >= segment.p0.x && intersection_point.second.x <= segment.p1.x;
-    return intersection_point;
-}
