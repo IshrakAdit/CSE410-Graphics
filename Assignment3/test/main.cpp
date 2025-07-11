@@ -9,45 +9,45 @@
 #include "classes.cpp"
 #include "bitmap_image.hpp"
 
-std::string input_file;
+using namespace std;
+using namespace chrono;
+
+string input_file;
 bool use_multithreading = true;
-unsigned int num_threads = std::thread::hardware_concurrency();
+unsigned int num_threads = thread::hardware_concurrency();
+
+bool texture_mode = false;
 
 int reflection_depth;
 int image_width, image_height;
-double view_angle = 80; // in degrees
+double view_angle = 80;
 double far_plane_distance = 500.0;
 int captured_images;
 
 Camera camera(Vector(125, -125, 125), Vector(0, 0, 0), Vector(0, 0, 1), 2, 0.5);
-std::vector<Object *> objects;
-std::vector<LightSource *> light_sources;
+vector<Object *> objects;
+vector<LightSource *> light_sources;
 
-// Function Declarations
-void init();
-void display();
-void idle();
-void handle_keys(unsigned char key, int x, int y);
-void handle_special_keys(int key, int x, int y);
-void load_data(const std::string &filename);
-void capture();
-void draw_axes();
-void free_memory();
+void initialize();
+void display_scene();
+void idle_callback();
+void key_input(unsigned char key, int x, int y);
+void special_key_input(int key, int x, int y);
+void load_scene(const string &filename);
+void save_rendered_image();
+void draw_coordinate_axes();
+void cleanup_resources();
 
-void init()
+void initialize()
 {
-    glClearColor(0.0f, 0.0f, 0.0f,
-                 1.0f); // Set background color to black and opaque
-
-    load_data(input_file);
-
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    load_scene(input_file);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-
     gluPerspective(view_angle, 1.0, 1.0, far_plane_distance);
 }
 
-void draw_axes()
+void draw_coordinate_axes()
 {
     glBegin(GL_LINES);
     glLineWidth(20);
@@ -64,260 +64,217 @@ void draw_axes()
     glLineWidth(1);
 }
 
-void capture()
+void save_rendered_image()
 {
-    std::chrono::steady_clock::time_point start =
-        std::chrono::steady_clock::now();
+    auto start = steady_clock::now();
     bitmap_image image(image_width, image_height);
     image.set_all_channels(0, 0, 0);
 
-    // plane_distance is the distance from the camera to the image plane
     double plane_distance = 1.0;
-    double window_height = 2 * tan(view_angle * PI / 360.0) * plane_distance;
-    double window_width = window_height;
+    double window_size = 2 * tan(view_angle * PI / 360.0) * plane_distance;
     Vector top_left = camera.pos + plane_distance * camera.look -
-                      (window_width / 2.0) * camera.right +
-                      (window_height / 2.0) * camera.up;
-    double du = window_width / image_width;
-    double dv = window_height / image_height;
+                      (window_size / 2.0) * camera.right +
+                      (window_size / 2.0) * camera.up +
+                      0.5 * (camera.right * (window_size / image_width)) -
+                      0.5 * (camera.up * (window_size / image_height));
 
-    // Choose middle of the grid cell
-    top_left += 0.5 * du * camera.right - 0.5 * dv * camera.up;
-
-    auto render_segment = [&](int start_col, int end_col)
+    auto render_range = [&](int start_col, int end_col)
     {
-        for (int i = start_col; i < end_col; i++)
+        for (int i = start_col; i < end_col; ++i)
         {
-            for (int j = 0; j < image_height; j++)
+            for (int j = 0; j < image_height; ++j)
             {
-                // Calculate current pixel
-                Vector cur_pixel =
-                    top_left + i * du * camera.right - j * dv * camera.up;
+                Vector pixel = top_left + i * (window_size / image_width) * camera.right -
+                               j * (window_size / image_height) * camera.up;
+                Ray ray(pixel, pixel - camera.pos);
 
-                // Cast ray from eye to pixel
-                Ray ray(cur_pixel, cur_pixel - camera.pos);
-
-                int nearest_idx = -1;
-                double t_min = 1e9;
-                for (int k = 0; k < objects.size(); k++)
+                int closest = -1;
+                double min_t = 1e9;
+                for (int k = 0; k < objects.size(); ++k)
                 {
-                    Object *o = objects[k];
-                    double t = o->find_ray_intersection(ray);
-                    if (t > 0 && t < t_min)
+                    double t = objects[k]->find_ray_intersection(ray);
+                    if (t > 0 && t < min_t)
                     {
-                        t_min = t;
-                        nearest_idx = k;
+                        min_t = t;
+                        closest = k;
                     }
                 }
 
-                if (nearest_idx == -1)
+                if (closest == -1)
                     continue;
-                double dist = camera.look.dot(t_min * ray.dir);
+                double dist = camera.look.dot(min_t * ray.dir);
                 if (dist > far_plane_distance)
                     continue;
+
                 Color color(0, 0, 0);
-                objects[nearest_idx]->shade(ray, color, reflection_depth);
+                objects[closest]->shade(ray, color, reflection_depth);
                 color.clamp();
 
-                image.set_pixel(i, j, 255 * color.r, 255 * color.g,
-                                255 * color.b);
+                image.set_pixel(i, j, 255 * color.r, 255 * color.g, 255 * color.b);
             }
         }
     };
 
     if (use_multithreading && num_threads > 1)
     {
-        std::vector<std::thread> threads;
+        vector<thread> workers;
         int cols_per_thread = image_width / num_threads;
-        for (int i = 0; i < num_threads; i++)
+        for (int i = 0; i < num_threads; ++i)
         {
-            int start_col = i * cols_per_thread;
-            int end_col = (i == num_threads - 1) ? image_width
-                                                 : (i + 1) * cols_per_thread;
-            threads.push_back(std::thread(render_segment, start_col, end_col));
+            int start = i * cols_per_thread;
+            int end = (i == num_threads - 1) ? image_width : (i + 1) * cols_per_thread;
+            workers.emplace_back(render_range, start, end);
         }
-        for (auto &t : threads)
+        for (auto &t : workers)
             t.join();
     }
     else
     {
-        render_segment(0, image_width);
+        render_range(0, image_width);
     }
 
-    std::string output_file =
-        "Output_1" + std::to_string(++captured_images) + ".bmp";
+    string filename = "Output_" + to_string(++captured_images) + ".bmp";
+    image.save_image(filename);
 
-    image.save_image(output_file);
-    double time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-                              std::chrono::steady_clock::now() - start)
-                              .count();
-    std::cout << "Image captured to " << output_file << " in "
-              << time_elapsed / 1000 << " seconds" << std::endl;
+    double elapsed = duration_cast<milliseconds>(
+                         steady_clock::now() - start)
+                         .count();
+    cout << "Saved: " << filename << " in " << elapsed / 1000 << " seconds" << endl;
 }
 
-void free_memory()
+void cleanup_resources()
 {
-    for (Object *object : objects)
-        delete object;
+    for (auto *o : objects)
+        delete o;
     objects.clear();
-
-    for (LightSource *light : light_sources)
-        delete light;
+    for (auto *l : light_sources)
+        delete l;
     light_sources.clear();
 }
 
-void load_data(const std::string &filename)
+void load_scene(const string &filename)
 {
-    std::ifstream file(filename);
+    ifstream file(filename);
     if (!file.is_open())
     {
-        std::cerr << "Error: File not found" << std::endl;
+        cerr << "Failed to open input file." << endl;
         return;
     }
 
-    int pixel;
-    file >> reflection_depth >> pixel;
-    image_width = image_height = pixel;
+    int resolution;
+    file >> reflection_depth >> resolution;
+    image_width = image_height = resolution;
 
     int num_objects;
     file >> num_objects;
-
-    for (int i = 0; i < num_objects; i++)
+    while (num_objects--)
     {
-        std::string type;
+        string type;
         file >> type;
 
         if (type == "sphere")
         {
-            double x, y, z, radius;
-            file >> x >> y >> z >> radius;
-            double r, g, b;
-            file >> r >> g >> b;
-            double ambient, diffuse, specular, reflection;
-            file >> ambient >> diffuse >> specular >> reflection;
+            double x, y, z, r, g, b, rad, amb, diff, spec, refl;
             int shine;
-            file >> shine;
-            Vector center(x, y, z);
-            Object *temp = new Sphere(center, radius);
-            temp->set_color(r, g, b);
-            temp->set_coefficients(ambient, diffuse, specular, reflection);
-            temp->set_shine(shine);
-            objects.push_back(temp);
+            file >> x >> y >> z >> rad >> r >> g >> b >> amb >> diff >> spec >> refl >> shine;
+            Object *o = new Sphere(Vector(x, y, z), rad);
+            o->set_color(r, g, b);
+            o->set_coefficients(amb, diff, spec, refl);
+            o->set_shine(shine);
+            objects.push_back(o);
         }
         else if (type == "triangle")
         {
-            double x1, y1, z1, x2, y2, z2, x3, y3, z3;
-            file >> x1 >> y1 >> z1 >> x2 >> y2 >> z2 >> x3 >> y3 >> z3;
-            Vector p1(x1, y1, z1), p2(x2, y2, z2), p3(x3, y3, z3);
-            double r, g, b;
-            file >> r >> g >> b;
-            double ambient, diffuse, specular, reflection;
-            file >> ambient >> diffuse >> specular >> reflection;
+            double pts[9], r, g, b, amb, diff, spec, refl;
             int shine;
-            file >> shine;
-            Object *temp = new Triangle(p1, p2, p3);
-            temp->set_color(r, g, b);
-            temp->set_coefficients(ambient, diffuse, specular, reflection);
-            temp->set_shine(shine);
-            objects.push_back(temp);
+            for (int i = 0; i < 9; ++i)
+                file >> pts[i];
+            file >> r >> g >> b >> amb >> diff >> spec >> refl >> shine;
+            Object *o = new Triangle(Vector(pts[0], pts[1], pts[2]),
+                                     Vector(pts[3], pts[4], pts[5]),
+                                     Vector(pts[6], pts[7], pts[8]));
+            o->set_color(r, g, b);
+            o->set_coefficients(amb, diff, spec, refl);
+            o->set_shine(shine);
+            objects.push_back(o);
         }
         else if (type == "general")
         {
-            double A, B, C, D, E, F, G, H, I, J;
-            file >> A >> B >> C >> D >> E >> F >> G >> H >> I >> J;
-            double x, y, z;
-            file >> x >> y >> z;
-            double length, width, height;
-            file >> length >> width >> height;
-            double r, g, b;
-            file >> r >> g >> b;
-            double ambient, diffuse, specular, reflection;
-            file >> ambient >> diffuse >> specular >> reflection;
+            double coeff[10], pos[3], dims[3], r, g, b, amb, diff, spec, refl;
             int shine;
-            file >> shine;
-            Vector reference_point(x, y, z);
-            Object *temp = new GeneralQuadraticSurface(A, B, C, D, E, F, G, H,
-                                                       I, J, reference_point,
-                                                       length, width, height);
-            temp->set_color(r, g, b);
-            temp->set_coefficients(ambient, diffuse, specular, reflection);
-            temp->set_shine(shine);
-            objects.push_back(temp);
+            for (int i = 0; i < 10; ++i)
+                file >> coeff[i];
+            for (int i = 0; i < 3; ++i)
+                file >> pos[i];
+            for (int i = 0; i < 3; ++i)
+                file >> dims[i];
+            file >> r >> g >> b >> amb >> diff >> spec >> refl >> shine;
+            Object *o = new GeneralQuadraticSurface(coeff[0], coeff[1], coeff[2], coeff[3], coeff[4],
+                                                    coeff[5], coeff[6], coeff[7], coeff[8], coeff[9],
+                                                    Vector(pos[0], pos[1], pos[2]), dims[0], dims[1], dims[2]);
+            o->set_color(r, g, b);
+            o->set_coefficients(amb, diff, spec, refl);
+            o->set_shine(shine);
+            objects.push_back(o);
         }
         else
         {
-            std::cerr << "Error reading file: Unknown object type" << std::endl;
-            return;
+            cerr << "Unknown object type: " << type << endl;
         }
     }
 
-    // The Floor
     Object *floor = new Floor(1000, 20);
     floor->set_coefficients(0.4, 0.2, 0.2, 0.2);
     floor->set_shine(1);
     objects.push_back(floor);
 
-    // Point Light Sources
     int num_point_lights;
     file >> num_point_lights;
-    for (int i = 0; i < num_point_lights; i++)
+    while (num_point_lights--)
     {
-        double x, y, z;
-        file >> x >> y >> z;
-        double r, g, b;
-        file >> r >> g >> b;
-        Vector position(x, y, z);
-        LightSource *pl = new PointLight(position, r, g, b);
-        light_sources.push_back(pl);
+        double x, y, z, r, g, b;
+        file >> x >> y >> z >> r >> g >> b;
+        light_sources.push_back(new PointLight(Vector(x, y, z), r, g, b));
     }
 
-    // Spot Light Sources
     int num_spot_lights;
     file >> num_spot_lights;
-    for (int i = 0; i < num_spot_lights; i++)
+    while (num_spot_lights--)
     {
-        double x, y, z;
-        file >> x >> y >> z;
-        double r, g, b;
-        file >> r >> g >> b;
-        Vector position(x, y, z);
-        double direction_x, direction_y, direction_z;
-        file >> direction_x >> direction_y >> direction_z;
-        double angle;
-        file >> angle;
-        Vector direction(direction_x, direction_y, direction_z);
-        LightSource *sl = new SpotLight(position, r, g, b, direction, angle);
-        light_sources.push_back(sl);
+        double x, y, z, r, g, b, dx, dy, dz, angle;
+        file >> x >> y >> z >> r >> g >> b >> dx >> dy >> dz >> angle;
+        light_sources.push_back(new SpotLight(Vector(x, y, z), r, g, b, Vector(dx, dy, dz), angle));
     }
 
     file.close();
 }
 
-void display()
+void display_scene()
 {
     glEnable(GL_DEPTH_TEST);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     gluLookAt(camera.pos.x, camera.pos.y, camera.pos.z,
-              camera.pos.x + camera.look.x, camera.pos.y + camera.look.y,
-              camera.pos.z + camera.look.z, camera.up.x, camera.up.y,
-              camera.up.z);
-    // draw_axes();
-    for (Object *they : objects)
-        they->draw();
-    // for (LightSource *light : light_sources) light->draw();
+              camera.pos.x + camera.look.x, camera.pos.y + camera.look.y, camera.pos.z + camera.look.z,
+              camera.up.x, camera.up.y, camera.up.z);
+
+    for (auto *o : objects)
+        o->draw();
     glutSwapBuffers();
 }
 
-void idle() { glutPostRedisplay(); }
+void idle_callback()
+{
+    glutPostRedisplay();
+}
 
-void handle_keys(unsigned char key, int x, int y)
+void key_input(unsigned char key, int, int)
 {
     switch (key)
     {
     case '0':
-        capture();
+        save_rendered_image();
         break;
     case '1':
         camera.look_left();
@@ -344,16 +301,23 @@ void handle_keys(unsigned char key, int x, int y)
         camera.move_down_same_ref();
         break;
     case 'p':
-        printf("Camera Position: (%.2lf, %.2lf, %.2lf)\n", camera.pos.x,
-               camera.pos.y, camera.pos.z);
+        cout << "Camera Position: ("
+             << fixed << setprecision(2)
+             << camera.pos.x << ", "
+             << camera.pos.y << ", "
+             << camera.pos.z << ")\n";
+        break;
+    case 't':
+        texture_mode = !texture_mode;
+        cout << "Texture mode: " << (texture_mode ? "ON" : "OFF") << endl;
         break;
     default:
-        printf("Unknown key pressed\n");
+        cout << "Unknown key pressed" << endl;
         break;
     }
 }
 
-void handle_special_keys(int key, int x, int y)
+void special_key_input(int key, int, int)
 {
     switch (key)
     {
@@ -376,17 +340,15 @@ void handle_special_keys(int key, int x, int y)
         camera.move_down();
         break;
     default:
-        printf("Unknown key pressed\n");
+        cout << "Unknown key pressed" << endl;
         break;
     }
 }
 
 int main(int argc, char **argv)
 {
-    if (argc < 2)
-        input_file = "scene.txt";
-    else
-        input_file = argv[1];
+    input_file = (argc < 2) ? "scene.txt" : argv[1];
+    loadTexture("texture1.jpg");
 
     glutInit(&argc, argv);
     glutInitWindowSize(768, 768);
@@ -394,16 +356,23 @@ int main(int argc, char **argv)
     glEnable(GLUT_MULTISAMPLE);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_MULTISAMPLE);
     glutCreateWindow("Ray Tracing");
-    glutDisplayFunc(display);
-    glutKeyboardFunc(handle_keys);
-    glutSpecialFunc(handle_special_keys);
-    glutIdleFunc(idle);
-    init();
+
+    glutDisplayFunc(display_scene);
+    glutKeyboardFunc(key_input);
+    glutSpecialFunc(special_key_input);
+    glutIdleFunc(idle_callback);
+
+    initialize();
 
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
-    glutCloseFunc(free_memory);
-
+    glutCloseFunc(cleanup_resources);
     glutMainLoop();
+
+    if (textureData)
+    {
+        stbi_image_free(textureData);
+        textureData = nullptr;
+    }
 
     return 0;
 }
